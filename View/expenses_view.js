@@ -46,65 +46,78 @@ const Expenses = {
                 </div>
             </div>
 
-            <!-- Utility Bills Dashboard Boxes -->
-            <div>
-                <h3 class="text-lg font-bold text-gray-800 mb-2">Mga Utility Bills (I-click ang kahon para sa kasaysayan at pag-encode)</h3>
-                <p class="text-xs text-gray-500 mb-4">Batay sa sistema ng Pilipinas (Meralco, Manila Water/Maynilad, PLDT/Globe/Converge).</p>
+            <!-- ========================================== -->
+            <!-- BAGONG DASHBOARD: UTILITY BILLS ANALYTICS  -->
+            <!-- ========================================== -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 text-white shadow-xl space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-700/60 pb-4">
+                    <div>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                            <i class="fa-solid fa-chart-line"></i> Hiwalay na Dashboard ng Bills
+                        </div>
+                        <h2 class="text-xl font-black tracking-tight">Utility Bills Monthly Percentage & Trend Analysis</h2>
+                        <p class="text-xs text-slate-400">Paghahambing ng gastusin ngayon kumpara noong nakaraang buwan para sa Meralco, Tubig, at WiFi.</p>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <!-- Meralco Box -->
-                    <div @click="openUtilityModal('Meralco (Kuryente)', 'Meralco')" class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm space-y-3 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer group">
+                    <!-- Meralco Analytics Card -->
+                    <div @click="openUtilityModal('Meralco (Kuryente)', 'Meralco')" class="bg-slate-800/80 border border-slate-700 hover:border-amber-500/60 p-5 rounded-2xl space-y-4 cursor-pointer transition-all group">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg">Kuryente</span>
-                            <i class="fa-solid fa-bolt text-amber-500 text-lg group-hover:scale-110 transition-transform"></i>
+                            <span class="text-xs font-bold uppercase text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg">Kuryente</span>
+                            <i class="fa-solid fa-bolt text-amber-400 text-lg group-hover:scale-110 transition-transform"></i>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-400">Meralco Bill (Ngayong Buwan)</p>
-                            <h4 class="text-xl font-black text-gray-900 mt-0.5">{{ formatCurrency(billComparison.meralco.current) }}</h4>
+                            <p class="text-xs text-slate-400">Ngayong Buwan</p>
+                            <h4 class="text-2xl font-black text-white mt-0.5">{{ formatCurrency(billComparison.meralco.current) }}</h4>
+                            <p class="text-[11px] text-slate-400 mt-1">Noong Nakaraan: <span class="text-slate-200 font-semibold">{{ formatCurrency(billComparison.meralco.previous) }}</span></p>
                         </div>
-                        <div class="flex items-center justify-between text-xs font-semibold pt-2 border-t border-gray-50">
-                            <span :class="billComparison.meralco.isIncrease ? 'text-rose-600' : 'text-emerald-600'" class="flex items-center gap-1">
+                        <div class="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs font-bold">
+                            <span :class="billComparison.meralco.isIncrease ? 'text-rose-400 bg-rose-500/10' : 'text-emerald-400 bg-emerald-500/10'" class="px-2.5 py-1 rounded-lg flex items-center gap-1.5">
                                 <i :class="billComparison.meralco.isIncrease ? 'fa-solid fa-arrow-trend-up' : 'fa-solid fa-arrow-trend-down'"></i>
-                                {{ Math.abs(billComparison.meralco.percentage) }}% kumpara noong nakaraan
+                                {{ Math.abs(billComparison.meralco.percentage) }}% {{ billComparison.meralco.isIncrease ? 'Itinaas' : 'Bumaba' }}
                             </span>
-                            <span class="text-gray-400 group-hover:text-amber-600 font-bold">Tignan <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
+                            <span class="text-slate-400 group-hover:text-amber-400">I-manage <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
                         </div>
                     </div>
 
-                    <!-- Tubig Box -->
-                    <div @click="openUtilityModal('Manila Water / Maynilad (Tubig)', 'Tubig')" class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm space-y-3 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer group">
+                    <!-- Tubig Analytics Card -->
+                    <div @click="openUtilityModal('Manila Water / Maynilad (Tubig)', 'Tubig')" class="bg-slate-800/80 border border-slate-700 hover:border-blue-500/60 p-5 rounded-2xl space-y-4 cursor-pointer transition-all group">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg">Tubig</span>
-                            <i class="fa-solid fa-faucet-drip text-blue-500 text-lg group-hover:scale-110 transition-transform"></i>
+                            <span class="text-xs font-bold uppercase text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-lg">Tubig</span>
+                            <i class="fa-solid fa-faucet-drip text-blue-400 text-lg group-hover:scale-110 transition-transform"></i>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-400">Manila Water / Maynilad (Ngayong Buwan)</p>
-                            <h4 class="text-xl font-black text-gray-900 mt-0.5">{{ formatCurrency(billComparison.water.current) }}</h4>
+                            <p class="text-xs text-slate-400">Ngayong Buwan</p>
+                            <h4 class="text-2xl font-black text-white mt-0.5">{{ formatCurrency(billComparison.water.current) }}</h4>
+                            <p class="text-[11px] text-slate-400 mt-1">Noong Nakaraan: <span class="text-slate-200 font-semibold">{{ formatCurrency(billComparison.water.previous) }}</span></p>
                         </div>
-                        <div class="flex items-center justify-between text-xs font-semibold pt-2 border-t border-gray-50">
-                            <span :class="billComparison.water.isIncrease ? 'text-rose-600' : 'text-emerald-600'" class="flex items-center gap-1">
+                        <div class="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs font-bold">
+                            <span :class="billComparison.water.isIncrease ? 'text-rose-400 bg-rose-500/10' : 'text-emerald-400 bg-emerald-500/10'" class="px-2.5 py-1 rounded-lg flex items-center gap-1.5">
                                 <i :class="billComparison.water.isIncrease ? 'fa-solid fa-arrow-trend-up' : 'fa-solid fa-arrow-trend-down'"></i>
-                                {{ Math.abs(billComparison.water.percentage) }}% kumpara noong nakaraan
+                                {{ Math.abs(billComparison.water.percentage) }}% {{ billComparison.water.isIncrease ? 'Itinaas' : 'Bumaba' }}
                             </span>
-                            <span class="text-gray-400 group-hover:text-blue-600 font-bold">Tignan <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
+                            <span class="text-slate-400 group-hover:text-blue-400">I-manage <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
                         </div>
                     </div>
 
-                    <!-- WiFi Box -->
-                    <div @click="openUtilityModal('PLDT / Globe / Converge (WiFi / Internet)', 'WiFi')" class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm space-y-3 hover:border-purple-400 hover:shadow-md transition-all cursor-pointer group">
+                    <!-- WiFi Analytics Card -->
+                    <div @click="openUtilityModal('PLDT / Globe / Converge (WiFi / Internet)', 'WiFi')" class="bg-slate-800/80 border border-slate-700 hover:border-purple-500/60 p-5 rounded-2xl space-y-4 cursor-pointer transition-all group">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg">Internet</span>
-                            <i class="fa-solid fa-wifi text-purple-500 text-lg group-hover:scale-110 transition-transform"></i>
+                            <span class="text-xs font-bold uppercase text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-lg">Internet</span>
+                            <i class="fa-solid fa-wifi text-purple-400 text-lg group-hover:scale-110 transition-transform"></i>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-400">PLDT / Globe / Converge (Ngayong Buwan)</p>
-                            <h4 class="text-xl font-black text-gray-900 mt-0.5">{{ formatCurrency(billComparison.wifi.current) }}</h4>
+                            <p class="text-xs text-slate-400">Ngayong Buwan</p>
+                            <h4 class="text-2xl font-black text-white mt-0.5">{{ formatCurrency(billComparison.wifi.current) }}</h4>
+                            <p class="text-[11px] text-slate-400 mt-1">Noong Nakaraan: <span class="text-slate-200 font-semibold">{{ formatCurrency(billComparison.wifi.previous) }}</span></p>
                         </div>
-                        <div class="flex items-center justify-between text-xs font-semibold pt-2 border-t border-gray-50">
-                            <span :class="billComparison.wifi.isIncrease ? 'text-rose-600' : 'text-emerald-600'" class="flex items-center gap-1">
+                        <div class="pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs font-bold">
+                            <span :class="billComparison.wifi.isIncrease ? 'text-rose-400 bg-rose-500/10' : 'text-emerald-400 bg-emerald-500/10'" class="px-2.5 py-1 rounded-lg flex items-center gap-1.5">
                                 <i :class="billComparison.wifi.isIncrease ? 'fa-solid fa-arrow-trend-up' : 'fa-solid fa-arrow-trend-down'"></i>
-                                {{ Math.abs(billComparison.wifi.percentage) }}% kumpara noong nakaraan
+                                {{ Math.abs(billComparison.wifi.percentage) }}% {{ billComparison.wifi.isIncrease ? 'Itinaas' : 'Bumaba' }}
                             </span>
-                            <span class="text-gray-400 group-hover:text-purple-600 font-bold">Tignan <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
+                            <span class="text-slate-400 group-hover:text-purple-400">I-manage <i class="fa-solid fa-chevron-right text-[10px]"></i></span>
                         </div>
                     </div>
                 </div>
@@ -293,8 +306,8 @@ const Expenses = {
             netBalance: 0,
             expenses: [],
             billComparison: {
-                meralco: { current: 0, percentage: 0, isIncrease: false },
-                water: { current: 0, percentage: 0, isIncrease: false },
+                meralco: { current: 0, previous: 0, percentage: 0, isIncrease: false },
+                water: { current: 0, previous: 0, percentage: 0, isIncrease: false },
                 wifi: { current: 0, percentage: 0, isIncrease: false }
             },
             showModal: false,
@@ -350,11 +363,6 @@ const Expenses = {
                     result = JSON.parse(text);
                 } catch (e) {
                     console.error("Server Response (Not JSON):", text);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Oops!',
-                        text: 'May error sa pagkuha ng data mula sa server. Pakitingnan ang console.'
-                    });
                     return;
                 }
 
@@ -379,11 +387,7 @@ const Expenses = {
         },
         async saveExpense() {
             if (!this.form.amount || this.form.amount <= 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Invalid na Halaga',
-                    text: 'Mangyaring maglagay ng wastong halaga.'
-                });
+                Swal.fire({ icon: 'warning', title: 'Invalid na Halaga', text: 'Mangyaring maglagay ng wastong halaga.' });
                 return;
             }
 
@@ -434,11 +438,7 @@ const Expenses = {
         },
         async saveUtilityBill() {
             if (!this.utilityForm.amount || this.utilityForm.amount <= 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Invalid na Halaga',
-                    text: 'Mangyaring maglagay ng wastong halaga ng bill.'
-                });
+                Swal.fire({ icon: 'warning', title: 'Invalid na Halaga', text: 'Mangyaring maglagay ng wastong halaga ng bill.' });
                 return;
             }
 
