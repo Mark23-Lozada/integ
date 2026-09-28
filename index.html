@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PocketPads - Cozy Apartment & Budget Journal</title>
+
+    <!-- LIBRARIES -->
+    <link rel="stylesheet" href="Libraries/sweetalert2.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <script src="Libraries/tailwind.js"></script>
+
+    <!-- Vue 3 & Router CDN -->
+    <script src="Libraries/vue.global.js"></script>
+    <script src="https://unpkg.com/vue-router@4"></script>
+
+    <!-- Axios CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <!-- SweetAlert2 Script -->
+    <script src="Libraries/sweetalert2.all.min.js"></script>
+
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+
+<body class="bg-[#f5f5f5] m-0 p-0 overflow-x-hidden">
+    <div id="app">
+        <router-view></router-view>
+    </div>
+    <!-- 1. MODELS -->
+    <script src="Model/login_model.js"></script>
+    <script src="Model/unit_model.js"></script>
+    <script src="Model/dashboard_model.js"></script>
+    <script src="Model/tenant_model.js"></script>
+    <script src="Model/rent_model.js"></script>
+    <script src="Model/expenses_model.js"></script>
+    <script src="Model/finance_model.js"></script>
+    <script src="Model/register_model.js"></script>
+
+    <!-- 2. CONTROLLERS -->
+    <script src="Controller/login_controller.js"></script>
+    <script src="Controller/units_controller.js"></script>
+    <script src="Controller/dashboard_controller.js"></script>
+    <script src="Controller/tenant_controller.js"></script>
+    <script src="Controller/rent.controller.js"></script>
+    <script src="Controller/register_controller.js"></script>
+    <script src="Controller/expenses_controller.js"></script>
+    <script src="Controller/finance_controller.js"></script>
+
+    <!-- 3. VIEWS (Tiyaking andito ang Login, Register, atbp. bago ang Router) -->
+    <script src="View/login.js"></script>
+    <script src="View/register.js"></script>
+    <script src="View/dashboard_layout.js"></script>
+    <script src="View/dashboard_view.js"></script>
+    <script src="View/units_view.js"></script>
+    <script src="View/tenants_view.js"></script>
+    <script src="View/rent_view.js"></script>
+    <script src="View/expenses_view.js"></script>
+    <!-- Siguraduhing isa lang ito -->
+    <script src="View/finance_view.js"></script>
+
+    <!-- 4. ROUTER -->
+    <script src="Router/dashboard.js"></script>
+
+    <!-- 5. VUE APP INITIALIZATION -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = Vue.createApp({});
+            if (typeof router !== 'undefined') {
+                app.use(router);
+                app.mount('#app');
+            } else {
+                console.error("Router is not defined! Suriin ang Router/dashboard.js");
+            }
+        });
+    </script>
+</body>
+
+</html>
