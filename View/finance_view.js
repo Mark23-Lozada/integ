@@ -5,7 +5,7 @@ const Finance = {
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 transform transition-all duration-500 hover:translate-x-1">
                 <div>
                     <h1 class="text-3xl font-black text-gray-900 tracking-tight transition-colors duration-300 hover:text-emerald-800">Finance & Transaction Reports</h1>
-                    <p class="text-sm text-gray-500 font-medium">Subaybayan ang mga koleksyon, buwanan at taunang kita, at transaksyon ng mga tenant.</p>
+                    <p class="text-sm text-gray-500 font-medium">Subaybayan ang mga koleksyon, buwanan at taunang kita, pinaka-kita (net remaining), at transaksyon ng mga tenant.</p>
                 </div>
                 <button @click="loadData" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
                     <i class="fas fa-sync-alt" :class="{'fa-spin': loading}"></i> I-refresh
@@ -52,38 +52,49 @@ const Finance = {
                     </div>
                 </div>
 
-                <!-- Right: 50% - 3 Nakapatong na Cards (Monthly, Yearly, Total Tenant Balances) -->
-                <div class="flex flex-col gap-3.5 justify-between">
+                <!-- Right: 50% - Nakapatong na Cards -->
+                <div class="flex flex-col gap-3 justify-between">
                     <!-- Monthly Collection Box -->
-                    <div class="bg-gradient-to-br from-amber-50/60 to-white border border-amber-200/80 px-6 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-amber-400 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between flex-1 group">
+                    <div class="bg-gradient-to-br from-amber-50/60 to-white border border-amber-200/80 px-5 py-3.5 rounded-2xl shadow-sm hover:shadow-xl hover:border-amber-400 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between flex-1 group">
                         <div>
-                            <p class="text-[11px] font-bold text-amber-800 uppercase tracking-wider group-hover:text-amber-900 transition-colors">NGAYONG BUWAN ({{ currentMonthName }})</p>
-                            <h3 class="text-2xl font-black text-gray-900 mt-0.5 group-hover:text-amber-600 transition-colors">₱ {{ formatMoney(monthlyCollected) }}</h3>
+                            <p class="text-[10px] font-bold text-amber-800 uppercase tracking-wider group-hover:text-amber-900 transition-colors">NGAYONG BUWAN ({{ currentMonthName }})</p>
+                            <h3 class="text-xl font-black text-gray-900 mt-0.5 group-hover:text-amber-600 transition-colors">₱ {{ formatMoney(monthlyCollected) }}</h3>
                         </div>
-                        <span class="p-2.5 bg-amber-500/10 text-amber-600 rounded-xl text-xs transition-all duration-300 group-hover:bg-amber-500 group-hover:text-white group-hover:scale-110">
+                        <span class="p-2 bg-amber-500/10 text-amber-600 rounded-xl text-xs transition-all duration-300 group-hover:bg-amber-500 group-hover:text-white group-hover:scale-110">
                             <i class="fas fa-calendar-alt"></i>
                         </span>
                     </div>
 
                     <!-- Yearly Collection Box -->
-                    <div class="bg-gradient-to-br from-indigo-50/50 to-white border border-indigo-100/80 px-6 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between flex-1 group">
+                    <div class="bg-gradient-to-br from-indigo-50/50 to-white border border-indigo-100/80 px-5 py-3.5 rounded-2xl shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between flex-1 group">
                         <div>
-                            <p class="text-[11px] font-bold text-indigo-900 uppercase tracking-wider group-hover:text-indigo-700 transition-colors">NGAYONG TAON ({{ currentYear }})</p>
-                            <h3 class="text-2xl font-black text-gray-900 mt-0.5 group-hover:text-indigo-600 transition-colors">₱ {{ formatMoney(yearlyCollected) }}</h3>
+                            <p class="text-[10px] font-bold text-indigo-900 uppercase tracking-wider group-hover:text-indigo-700 transition-colors">NGAYONG TAON ({{ currentYear }})</p>
+                            <h3 class="text-xl font-black text-gray-900 mt-0.5 group-hover:text-indigo-600 transition-colors">₱ {{ formatMoney(yearlyCollected) }}</h3>
                         </div>
-                        <span class="p-2.5 bg-indigo-500/10 text-indigo-600 rounded-xl text-xs transition-all duration-300 group-hover:bg-indigo-500 group-hover:text-white group-hover:scale-110">
+                        <span class="p-2 bg-indigo-500/10 text-indigo-600 rounded-xl text-xs transition-all duration-300 group-hover:bg-indigo-500 group-hover:text-white group-hover:scale-110">
                             <i class="fas fa-chart-line"></i>
                         </span>
                     </div>
 
-                    <!-- Total Tenant Remaining Balances Box (Pinalitan ang Average Transaction) -->
-                    <div class="bg-gradient-to-br from-teal-50/50 to-white border border-teal-100/80 px-6 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-teal-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between flex-1 group">
+                    <!-- Total Tenant Remaining Balances Box -->
+                    <div class="bg-gradient-to-br from-teal-50/50 to-white border border-teal-100/80 px-5 py-3.5 rounded-2xl shadow-sm hover:shadow-xl hover:border-teal-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between flex-1 group">
                         <div>
-                            <p class="text-[11px] font-bold text-teal-900 uppercase tracking-wider group-hover:text-teal-700 transition-colors">KABUUANG BALANSE NG MGA TENANT</p>
-                            <h3 class="text-2xl font-black text-gray-900 mt-0.5 group-hover:text-teal-600 transition-colors">₱ {{ formatMoney(totalTenantBalances) }}</h3>
+                            <p class="text-[10px] font-bold text-teal-900 uppercase tracking-wider group-hover:text-teal-700 transition-colors">KABUUANG BALANSE NG MGA TENANT</p>
+                            <h3 class="text-xl font-black text-gray-900 mt-0.5 group-hover:text-teal-600 transition-colors">₱ {{ formatMoney(totalTenantBalances) }}</h3>
                         </div>
-                        <span class="p-2.5 bg-teal-500/10 text-teal-600 rounded-xl text-xs transition-all duration-300 group-hover:bg-teal-500 group-hover:text-white group-hover:scale-110">
+                        <span class="p-2 bg-teal-500/10 text-teal-600 rounded-xl text-xs transition-all duration-300 group-hover:bg-teal-500 group-hover:text-white group-hover:scale-110">
                             <i class="fas fa-file-invoice-dollar"></i>
+                        </span>
+                    </div>
+
+                    <!-- Pinaka-kita (Remaining Net Income after Budget) Box -->
+                    <div class="bg-gradient-to-br from-emerald-50/70 to-white border border-emerald-200/80 px-5 py-3.5 rounded-2xl shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between flex-1 group">
+                        <div>
+                            <p class="text-[10px] font-bold text-emerald-900 uppercase tracking-wider group-hover:text-emerald-700 transition-colors">PINAKA-KITA (NET KITA KALTAS MONTHLY BUDGET)</p>
+                            <h3 class="text-xl font-black text-emerald-700 mt-0.5 group-hover:text-emerald-800 transition-colors">₱ {{ formatMoney(remainingNetIncome) }}</h3>
+                        </div>
+                        <span class="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl text-xs transition-all duration-300 group-hover:bg-emerald-500 group-hover:text-white group-hover:scale-110">
+                            <i class="fas fa-piggy-bank"></i>
                         </span>
                     </div>
                 </div>
@@ -250,6 +261,7 @@ const Finance = {
             finances: [],
             totalCollected: 0,
             totalTenantBalances: 0,
+            remainingNetIncome: 0,
             loading: false,
             searchQuery: '',
             selectedYear: '',
@@ -405,14 +417,57 @@ const Finance = {
         },
         async loadTenantBalances() {
             try {
-                // Palitan ang 'rent.php' ng tamang pangalan ng PHP file mo (hal. 'finance.php')
                 const response = await fetch('api/rent.php?action=balances');
-                const data = await response.json();
+                const text = await response.text();
+
+                let jsonString = text.trim();
+                const firstBrace = jsonString.indexOf('{');
+                const firstBracket = jsonString.indexOf('[');
+                let startIndex = 0;
+                if (firstBrace !== -1 && firstBracket !== -1) {
+                    startIndex = Math.min(firstBrace, firstBracket);
+                } else if (firstBrace !== -1) {
+                    startIndex = firstBrace;
+                } else if (firstBracket !== -1) {
+                    startIndex = firstBracket;
+                }
+                if (startIndex > 0) jsonString = jsonString.substring(startIndex);
+
+                const data = JSON.parse(jsonString);
                 if (data && data.success && data.balances) {
                     this.totalTenantBalances = data.balances.reduce((sum, t) => sum + parseFloat(t.remaining_balance || 0), 0);
                 }
             } catch (e) {
                 console.error("Error loading tenant balances:", e);
+            }
+        },
+        async loadExpenseFinancials() {
+            try {
+                const response = await fetch('api/expenses_api.php');
+                const text = await response.text();
+
+                let jsonString = text.trim();
+                const firstBrace = jsonString.indexOf('{');
+                const firstBracket = jsonString.indexOf('[');
+                let startIndex = 0;
+                if (firstBrace !== -1 && firstBracket !== -1) {
+                    startIndex = Math.min(firstBrace, firstBracket);
+                } else if (firstBrace !== -1) {
+                    startIndex = firstBrace;
+                } else if (firstBracket !== -1) {
+                    startIndex = firstBracket;
+                }
+                if (startIndex > 0) jsonString = jsonString.substring(startIndex);
+
+                const data = JSON.parse(jsonString);
+                if (data && data.success) {
+                    // Dito kinukuha ang net profit o natitirang kita mula sa expenses API
+                    this.remainingNetIncome = data.monthStats && data.monthStats.netProfit !== undefined ?
+                        data.monthStats.netProfit :
+                        (data.remainingNetIncome !== undefined ? data.remainingNetIncome : 0);
+                }
+            } catch (e) {
+                console.error("Error loading expense financials:", e);
             }
         },
         async loadData() {
@@ -428,6 +483,7 @@ const Finance = {
                 }
             }
             await this.loadTenantBalances();
+            await this.loadExpenseFinancials();
             this.loading = false;
         }
     },
