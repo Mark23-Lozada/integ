@@ -1,7 +1,7 @@
 const Rent = {
     template: `
         <div class="space-y-6 min-h-full pb-10 transition-all duration-500 ease-out">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 transform transition-all duration-500 hover:translate-x-1">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 transform transition-all duration-500 hover:translate-x-1" data-aos="fade-right">
                 <div>
                     <h1 class="text-3xl font-black text-gray-900 tracking-tight transition-colors duration-300 hover:text-emerald-800">Rent Payment & Balance Tracker</h1>
                     <p class="text-sm text-gray-500 font-medium">Subaybayan ang buwanang bayarin, balanse, at mag-record ng monthly rent payments.</p>
@@ -12,32 +12,32 @@ const Rent = {
             </div>
             <hr class="border-gray-100 transition-all duration-500 hover:border-emerald-500/50">
 
-            <!-- Summary Cards na may 3D lift at glow -->
+            <!-- Summary Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group">
+                <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group" data-aos="fade-up" data-aos-delay="0">
                     <div>
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider group-hover:text-emerald-600 transition-colors">Total Collected This Month</p>
-                        <h3 class="text-2xl font-black text-gray-900 mt-1 group-hover:text-emerald-700 transition-colors">₱{{ totalCollected.toLocaleString() }}</h3>
+                        <h3 class="text-2xl font-black text-gray-900 mt-1 group-hover:text-emerald-700 transition-colors" v-countup>₱{{ totalCollected.toLocaleString() }}</h3>
                     </div>
                     <div class="p-3 bg-emerald-500/10 text-emerald-600 rounded-xl text-lg transition-all duration-300 group-hover:bg-emerald-500 group-hover:text-white group-hover:scale-110">
                         <i class="fa-solid fa-wallet"></i>
                     </div>
                 </div>
 
-                <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group">
+                <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group" data-aos="fade-up" data-aos-delay="100">
                     <div>
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider group-hover:text-emerald-600 transition-colors">Fully Paid Accounts</p>
-                        <h3 class="text-2xl font-black text-emerald-600 mt-1 group-hover:scale-105 origin-left transition-transform">{{ fullyPaidCount }}</h3>
+                        <h3 class="text-2xl font-black text-emerald-600 mt-1 group-hover:scale-105 origin-left transition-transform" v-countup>{{ fullyPaidCount }}</h3>
                     </div>
                     <div class="p-3 bg-emerald-500/10 text-emerald-600 rounded-xl text-lg transition-all duration-300 group-hover:bg-emerald-500 group-hover:text-white group-hover:scale-110">
                         <i class="fa-solid fa-circle-check"></i>
                     </div>
                 </div>
 
-                <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-xl hover:border-amber-200 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group">
+                <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-xl hover:border-amber-200 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group" data-aos="fade-up" data-aos-delay="200">
                     <div>
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider group-hover:text-amber-600 transition-colors">Total Partial Accounts</p>
-                        <h3 class="text-2xl font-black text-amber-500 mt-1 group-hover:scale-105 origin-left transition-transform">{{ totalPartialCount }}</h3>
+                        <h3 class="text-2xl font-black text-amber-500 mt-1 group-hover:scale-105 origin-left transition-transform" v-countup>{{ totalPartialCount }}</h3>
                     </div>
                     <div class="p-3 bg-amber-500/10 text-amber-500 rounded-xl text-lg transition-all duration-300 group-hover:bg-amber-500 group-hover:text-white group-hover:scale-110">
                         <i class="fa-solid fa-clock-rotate-left"></i>
@@ -45,11 +45,10 @@ const Rent = {
                 </div>
             </div>
 
-            <!-- RENT COLLECTION WAVE GRAPH SECTION (Idinagdag na hiling) -->
-            <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500 text-gray-900 relative overflow-hidden group">
+            <!-- RENT COLLECTION WAVE GRAPH SECTION -->
+            <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500 text-gray-900 relative overflow-hidden group" data-aos="zoom-in-up" data-aos-delay="0">
                 <div class="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
                 
-                <!-- Graph Header & Filter -->
                 <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 relative z-10">
                     <div>
                         <h3 class="text-base font-bold text-gray-900 tracking-wide transition-all duration-300 group-hover:translate-x-1">Rent Payment Collection Trend</h3>
@@ -64,7 +63,6 @@ const Rent = {
                     </div>
                 </div>
 
-                <!-- SVG Graph Container -->
                 <div class="relative h-56 w-full pt-6 relative z-10">
                     <svg class="w-full h-40 overflow-visible" viewBox="0 0 500 140">
                         <defs>
@@ -74,32 +72,25 @@ const Rent = {
                             </linearGradient>
                         </defs>
 
-                        <!-- Grid Lines -->
                         <line x1="0" y1="0" x2="500" y2="0" stroke="#e2e8f0" stroke-opacity="0.8" stroke-dasharray="4" />
                         <line x1="0" y1="45" x2="500" y2="45" stroke="#e2e8f0" stroke-opacity="0.8" stroke-dasharray="4" />
                         <line x1="0" y1="90" x2="500" y2="90" stroke="#e2e8f0" stroke-opacity="0.8" stroke-dasharray="4" />
                         <line x1="0" y1="135" x2="500" y2="135" stroke="#cbd5e1" stroke-opacity="1" />
 
-                        <!-- Smooth Area Wave Fill -->
-                        <path :d="rentAreaPath" fill="url(#rentWaveGradient)" class="transition-all duration-700 ease-in-out" />
+                        <path :d="rentAreaPath" fill="url(#rentWaveGradient)" class="transition-all duration-700 ease-in-out pp-chart-area" />
+                        <path :d="rentCurvePath" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" pathLength="1" class="transition-all duration-700 ease-in-out filter drop-shadow-sm pp-chart-line" />
 
-                        <!-- Smooth Curved Line (Wave) -->
-                        <path :d="rentCurvePath" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" class="transition-all duration-700 ease-in-out filter drop-shadow-sm" />
-
-                        <!-- Points & Labels -->
-                        <g v-for="(pt, idx) in rentPoints" :key="'rent-'+idx" class="transition-transform duration-300 hover:scale-125 origin-center cursor-pointer">
+                        <g v-for="(pt, idx) in rentPoints" :key="'rent-'+idx" class="transition-transform duration-300 hover:scale-125 origin-center cursor-pointer pp-chart-point" :style="{ animationDelay: (idx * 80 + 500) + 'ms' }">
                             <circle :cx="pt.x" :cy="pt.y" r="4.5" fill="#ffffff" stroke="#34d399" stroke-width="2.5" class="transition-all duration-300 hover:r-7" />
                             <text :x="pt.x" :y="pt.y - 12" font-size="9" font-weight="700" fill="#059669" text-anchor="middle" class="filter drop-shadow-sm">{{ formatCompact(pt.value) }}</text>
                         </g>
                     </svg>
 
-                    <!-- X-Axis Labels -->
                     <div class="flex justify-between text-xs font-semibold text-gray-500 px-2 mt-2">
                         <span v-for="(item, index) in activeRentTrends" :key="index" class="transition-colors duration-300 hover:text-gray-900">{{ item.label }}</span>
                     </div>
                 </div>
 
-                <!-- Legend -->
                 <div class="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-gray-100 text-xs font-semibold relative z-10">
                     <div class="flex items-center gap-2 transition-transform duration-300 hover:scale-105">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm shadow-emerald-500/40 animate-pulse"></span>
@@ -138,7 +129,7 @@ const Rent = {
                     </div>
                 </div>
 
-                <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden" data-aos="fade-up" data-aos-delay="100">
                     <div class="p-3 bg-gray-50 border-b border-gray-100 font-bold text-xs text-gray-700 flex justify-between items-center">
                         <span>Listahan ng Umuupa at Kasalukuyang Balanse</span>
                         <span class="text-xs bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full font-bold border border-emerald-200/50">Nagpapakita ng {{ filteredBalances.length }} na tala</span>
@@ -191,7 +182,7 @@ const Rent = {
             </div>
 
             <!-- TABLE 2: PAYMENT HISTORY -->
-            <div v-if="activeTab === 'history'" class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+            <div v-if="activeTab === 'history'" class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden" data-aos="fade-up" data-aos-delay="200">
                 <div class="p-3 bg-gray-50 border-b border-gray-100 font-bold text-xs text-gray-700">Kasaysayan ng Lahat ng Transaksyon sa Pagbabayad (Finances)</div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse whitespace-nowrap text-xs">
@@ -362,7 +353,6 @@ const Rent = {
             return value;
         },
         generateDynamicRentTrends() {
-            // Buwanan (Monthly Trends) mula sa history data
             const months = [];
             const currentDate = new Date();
             for (let i = -3; i <= 2; i++) {
@@ -381,7 +371,6 @@ const Rent = {
             }
             this.monthlyTrends = months;
 
-            // Taunang (Yearly Trends) mula sa history data
             const currentYearNum = new Date().getFullYear();
             const yearsList = [currentYearNum - 3, currentYearNum - 2, currentYearNum - 1, currentYearNum];
             this.yearlyTrends = yearsList.map(yr => {
@@ -421,6 +410,9 @@ const Rent = {
             this.showModal = true;
         },
         async submitPayment() {
+            const paymentOk = await RentController.handlePaymentSubmit(this.form, null);
+            if (!paymentOk) return;
+
             const paymentPayload = {
                 tenant_id: this.form.tenant_id,
                 tenant_name: this.form.tenant_name,
@@ -456,7 +448,6 @@ const Rent = {
     },
     mounted() {
         this.fetchData();
-        // Automatic AJAX refresh every 5 seconds (5000 ms)
         this.autoRefreshTimer = setInterval(() => {
             this.fetchData();
         }, 5000);

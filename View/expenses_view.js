@@ -4,7 +4,7 @@ const Expenses = {
 
             <!-- Header -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div class="flex flex-col gap-1 transform transition-all duration-500 hover:translate-x-1">
+                <div class="flex flex-col gap-1 transform transition-all duration-500 hover:translate-x-1" data-aos="fade-right">
                     <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight transition-colors duration-300 hover:text-emerald-800">Expenses &amp; Budget</h1>
                     <p class="text-sm text-gray-500 font-medium">{{ budgetPercent }}% of each month's collected rent goes to the Monthly Budget.</p>
                 </div>
@@ -26,13 +26,14 @@ const Expenses = {
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                 <!-- Monthly budget card -->
-                <div class="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-emerald-950/10 transition-all duration-500 transform hover:-translate-y-1.5 flex flex-col justify-between group border border-gray-100 relative overflow-hidden">
+                <div class="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-emerald-950/10 transition-all duration-500 transform hover:-translate-y-1.5 flex flex-col justify-between group border border-gray-100 relative overflow-hidden" data-aos="fade-up" data-aos-delay="0">
                     <div class="absolute -right-12 -bottom-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700 pointer-events-none"></div>
                     <div>
                         <div class="flex justify-between items-start relative z-10">
                             <div>
-                                <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider transition-all duration-300 group-hover:text-emerald-700">Monthly Budget ({{ budgetPercent }}%)</p>
-                                <h3 class="text-4xl font-extrabold text-gray-900 mt-2 tracking-tight transition-transform duration-300 group-hover:scale-[1.02] origin-left">{{ money(ms.budgetPool) }}</h3>
+                                <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider transition-all duration-300 group-hover:text-emerald-700">Available Budget</p>
+                                <h3 class="text-4xl font-extrabold text-gray-900 mt-2 tracking-tight transition-transform duration-300 group-hover:scale-[1.02] origin-left" v-countup>{{ money(ms.budgetAvailable) }}</h3>
+                                <p class="text-[11px] text-gray-500 mt-1 font-medium">{{ budgetPercent }}% of this month: {{ money(ms.budgetPool) }} + carried over: {{ money(ms.carryOver) }}</p>
                             </div>
                             <div class="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs font-semibold rounded-full border border-emerald-200/60 shadow-sm transition-all duration-300 group-hover:bg-emerald-500 group-hover:text-white group-hover:scale-105">{{ monthLabel }}</div>
                         </div>
@@ -68,7 +69,7 @@ const Expenses = {
                     <div class="mt-6 pt-5 border-t border-gray-100 grid grid-cols-2 gap-4 bg-gray-50/80 p-4 rounded-xl backdrop-blur-sm relative z-10 transition-all duration-300 group-hover:bg-emerald-50/30">
                         <div class="transform transition-transform duration-300 hover:translate-x-1">
                             <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Collected This Month</p>
-                            <h4 class="text-xl font-bold text-gray-900 mt-1">{{ money(ms.collected) }}</h4>
+                            <h4 class="text-xl font-bold text-gray-900 mt-1" v-countup>{{ money(ms.collected) }}</h4>
                         </div>
                         <div class="transform transition-transform duration-300 hover:translate-x-1">
                             <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Net Profit</p>
@@ -79,32 +80,32 @@ const Expenses = {
 
                 <!-- Right stacked cards -->
                 <div class="flex flex-col gap-3 justify-between">
-                    <div class="bg-gradient-to-br from-blue-50/50 to-white border border-blue-100/80 px-5 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-blue-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group">
+                    <div class="bg-gradient-to-br from-blue-50/50 to-white border border-blue-100/80 px-5 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-blue-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group" data-aos="fade-up" data-aos-delay="100">
                         <div>
                             <p class="text-xs font-semibold text-blue-900 uppercase tracking-wider transition-colors duration-300 group-hover:text-blue-700">Rent Collected</p>
-                            <h4 class="text-xl font-bold text-gray-900 mt-0.5 tracking-tight group-hover:text-blue-600 transition-colors">{{ money(ms.collected) }}</h4>
+                            <h4 class="text-xl font-bold text-gray-900 mt-0.5 tracking-tight group-hover:text-blue-600 transition-colors" v-countup>{{ money(ms.collected) }}</h4>
                             <p class="text-[11px] text-gray-500 mt-0.5">All payments received in {{ monthLabel }}</p>
                         </div>
                         <div class="p-3 bg-blue-500/10 text-blue-600 text-sm font-semibold rounded-xl transition-all duration-300 group-hover:bg-blue-500 group-hover:text-white group-hover:scale-110 group-hover:rotate-6"><i class="fa-solid fa-peso-sign"></i></div>
                     </div>
 
-                    <div class="bg-gradient-to-br from-rose-50/50 to-white border border-rose-100/80 px-5 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-rose-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group">
+                    <div class="bg-gradient-to-br from-rose-50/50 to-white border border-rose-100/80 px-5 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-rose-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group" data-aos="fade-up" data-aos-delay="200">
                         <div>
                             <p class="text-xs font-semibold text-rose-900 uppercase tracking-wider transition-colors duration-300 group-hover:text-rose-700">Approved Expenses</p>
-                            <h4 class="text-xl font-bold text-gray-900 mt-0.5 tracking-tight group-hover:text-rose-600 transition-colors">{{ money(ms.totalSpent) }}</h4>
+                            <h4 class="text-xl font-bold text-gray-900 mt-0.5 tracking-tight group-hover:text-rose-600 transition-colors" v-countup>{{ money(ms.totalSpent) }}</h4>
                             <p class="text-[11px] text-gray-500 mt-0.5">Only approved items are counted</p>
                         </div>
                         <div class="p-3 bg-rose-500/10 text-rose-600 text-sm font-semibold rounded-xl transition-all duration-300 group-hover:bg-rose-500 group-hover:text-white group-hover:scale-110 group-hover:rotate-6"><i class="fa-solid fa-file-invoice-dollar"></i></div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-gradient-to-br from-amber-50/60 to-white border border-amber-200/80 p-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-amber-400 transition-all duration-300 transform hover:-translate-y-1 group">
+                        <div class="bg-gradient-to-br from-amber-50/60 to-white border border-amber-200/80 p-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-amber-400 transition-all duration-300 transform hover:-translate-y-1 group" data-aos="fade-up" data-aos-delay="0">
                             <p class="text-[11px] font-semibold text-amber-800 uppercase tracking-wider group-hover:text-amber-900 transition-colors">Over Budget</p>
-                            <h4 class="text-lg font-bold text-gray-900 mt-1 truncate group-hover:text-amber-600 transition-colors">{{ money(ms.overflow) }}</h4>
+                            <h4 class="text-lg font-bold text-gray-900 mt-1 truncate group-hover:text-amber-600 transition-colors" v-countup>{{ money(ms.overflow) }}</h4>
                         </div>
-                        <div class="bg-gradient-to-br from-indigo-50/50 to-white border border-indigo-100/80 p-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all duration-300 transform hover:-translate-y-1 group">
+                        <div class="bg-gradient-to-br from-indigo-50/50 to-white border border-indigo-100/80 p-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all duration-300 transform hover:-translate-y-1 group" data-aos="fade-up" data-aos-delay="100">
                             <p class="text-[11px] font-semibold text-indigo-900 uppercase tracking-wider group-hover:text-indigo-700 transition-colors">Pending Approval</p>
-                            <h4 class="text-lg font-bold text-gray-900 mt-1 truncate group-hover:text-indigo-600 transition-colors">{{ money(ms.pending) }}</h4>
+                            <h4 class="text-lg font-bold text-gray-900 mt-1 truncate group-hover:text-indigo-600 transition-colors" v-countup>{{ money(ms.pending) }}</h4>
                         </div>
                     </div>
                 </div>
@@ -120,11 +121,11 @@ const Expenses = {
                 <span>{{ money(ms.pending) }} is pending. If everything is approved, you will be {{ money(pendingOver) }} over the Monthly Budget.</span>
             </div>
             <div v-else class="bg-gray-50/80 border border-gray-100 px-5 py-3 rounded-2xl text-xs text-gray-500 font-medium">
-                Spending within the budget is free to approve. If an expense goes over, you will be asked to confirm and the excess is deducted from profit. Unused budget does not carry over.
+                Spending within the budget is free to approve. If an expense goes over, you will be asked to confirm and the excess is deducted from profit. Unused budget carries over to the next month.
             </div>
 
             <!-- Utility bills -->
-            <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500 relative overflow-hidden group">
+            <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500 relative overflow-hidden group" data-aos="fade-up" data-aos-delay="200">
                 <div class="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
                 <div class="mb-5 relative z-10">
                     <h3 class="text-base font-bold text-gray-900 tracking-wide transition-all duration-300 group-hover:translate-x-1">Utility Bills</h3>
@@ -137,7 +138,7 @@ const Expenses = {
                             <div class="p-2.5 rounded-xl text-sm transition-all duration-300 group-hover:scale-110 group-hover:rotate-6" :class="u.iconBg"><i :class="u.icon"></i></div>
                         </div>
                         <p class="text-[11px] text-gray-500 font-medium">{{ u.b.currentMonth ? monthText(u.b.currentMonth) + ' bill' : 'No bill recorded yet' }}</p>
-                        <h4 class="text-2xl font-bold text-gray-900 mt-0.5">{{ money(u.b.current) }}</h4>
+                        <h4 class="text-2xl font-bold text-gray-900 mt-0.5" v-countup>{{ money(u.b.current) }}</h4>
                         <div v-if="u.b.previousMonth" class="mt-3 pt-3 border-t border-gray-100 text-xs space-y-1">
                             <p class="text-gray-500">Previous ({{ monthText(u.b.previousMonth) }}): <span class="font-semibold text-gray-700">{{ money(u.b.previous) }}</span></p>
                             <p v-if="u.b.diff !== 0" class="font-bold" :class="u.b.isIncrease ? 'text-rose-600' : 'text-emerald-600'">
@@ -152,7 +153,7 @@ const Expenses = {
             </div>
 
             <!-- Expenses for the month -->
-            <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
+            <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group" data-aos="fade-up" data-aos-delay="0">
                 <div class="flex items-center justify-between pb-4 border-b border-gray-100 mb-4">
                     <div>
                         <h3 class="text-sm font-bold text-gray-900 transition-colors duration-300 group-hover:text-emerald-800">Expenses for {{ monthLabel }}</h3>
@@ -199,7 +200,7 @@ const Expenses = {
             </div>
 
             <!-- Year summary -->
-            <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
+            <div class="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group" data-aos="fade-up" data-aos-delay="100">
                 <div class="flex items-center justify-between pb-4 border-b border-gray-100 mb-4">
                     <div>
                         <h3 class="text-sm font-bold text-gray-900 transition-colors duration-300 group-hover:text-emerald-800">Year Summary</h3>
@@ -265,9 +266,11 @@ const Expenses = {
                                 <select v-model="item.category" class="col-span-12 sm:col-span-2 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
                                     <option value="Supplies">Supplies</option>
                                     <option value="Repairs">Repairs</option>
+                                    <option value="Taxes & Permits">Taxes &amp; Permits (BIR, Mayor's permit, RPT)</option>
+                                    <option value="Salaries & Benefits">Salaries &amp; Benefits (SSS, PhilHealth, Pag-IBIG)</option>
                                     <option value="Admin/Others">Admin / Other</option>
                                 </select>
-                                <input type="text" v-model="item.sub_category" :id="'item-name-' + item.key" placeholder="e.g. Soap, PVC pipe, Carbon fiber" class="col-span-12 sm:col-span-4 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
+                                <input type="text" v-model="item.sub_category" :id="'item-name-' + item.key" placeholder="Enter Materials" class="col-span-12 sm:col-span-4 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
                                 <input type="number" min="1" step="1" v-model="item.qty" title="Quantity" class="col-span-3 sm:col-span-1 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
                                 <input type="number" step="0.01" min="0" v-model="item.price" @keydown.enter.prevent="nextRow(i)" placeholder="0.00" title="Price of one" class="col-span-4 sm:col-span-2 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
                                 <span class="col-span-4 sm:col-span-2 text-right text-sm font-bold text-gray-700">{{ money(lineTotal(item)) }}</span>
@@ -348,7 +351,7 @@ const Expenses = {
             month,
             year: Number(month.slice(0, 4)),
             budgetPercent: 30,
-            ms: { collected: 0, budgetPool: 0, budgetUsed: 0, budgetRemaining: 0, overflow: 0, totalSpent: 0, pending: 0, netProfit: 0 },
+            ms: { collected: 0, budgetPool: 0, carryOver: 0, budgetAvailable: 0, budgetUsed: 0, budgetRemaining: 0, overflow: 0, totalSpent: 0, pending: 0, netProfit: 0 },
             expenses: [],
             billComparison: {
                 electricity: { current: 0, previous: 0, diff: 0, percentage: 0, isIncrease: true, currentMonth: null, previousMonth: null },
@@ -362,7 +365,7 @@ const Expenses = {
                     label: 'Electricity',
                     title: 'Electricity Bill',
                     name: 'Electricity',
-                    search: 'Electric,Meralco',
+                    search: 'Electric,Meralco,Kuryente',
                     icon: 'fa-solid fa-bolt',
                     card: 'from-amber-50/60 border-amber-200/80 hover:border-amber-400',
                     text: 'text-amber-800',
@@ -373,7 +376,7 @@ const Expenses = {
                     label: 'Water',
                     title: 'Water Bill',
                     name: 'Water',
-                    search: 'Water,Tubig',
+                    search: 'Water,Tubig,Maynilad,Manila Water',
                     icon: 'fa-solid fa-faucet-drip',
                     card: 'from-blue-50/50 border-blue-100/80 hover:border-blue-300',
                     text: 'text-blue-900',
@@ -384,7 +387,7 @@ const Expenses = {
                     label: 'Internet',
                     title: 'Internet Bill',
                     name: 'WiFi',
-                    search: 'WiFi,Internet',
+                    search: 'WiFi,Internet,Converge,PLDT,Globe',
                     icon: 'fa-solid fa-wifi',
                     card: 'from-purple-50/60 border-purple-200/80 hover:border-purple-400',
                     text: 'text-purple-800',
@@ -406,7 +409,7 @@ const Expenses = {
             return this.monthText(this.month);
         },
         budgetUsedPct() {
-            return this.ms.budgetPool > 0 ? Math.min(100, (this.ms.budgetUsed / this.ms.budgetPool) * 100) : 0;
+            return this.ms.budgetAvailable > 0 ? Math.min(100, (this.ms.budgetUsed / this.ms.budgetAvailable) * 100) : 0;
         },
         donutColor() {
             if (this.ms.overflow > 0 || this.budgetUsedPct >= 100) return 'text-rose-500';
@@ -453,7 +456,7 @@ const Expenses = {
             return this.month === this.year + '-' + String(m).padStart(2, '0');
         },
         money(val) {
-            return '₱' + Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return '₱' + Number(val || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
         lineTotal(it) {
             const qty = Number(it.qty) || 0;
@@ -498,11 +501,18 @@ const Expenses = {
             const data = await this.api({ cache: 'no-store' }, '?month=' + encodeURIComponent(this.month) + '&year=' + this.year);
             if (!data.success) return;
             this.budgetPercent = Math.round((data.budgetRate || 0.3) * 100);
-            this.ms = data.monthStats;
+            // Bawal negative: kapag lampas ang gastos, 0 ang ipapakita (nakikita pa rin ang "Over budget")
+            const noNeg = (v) => Math.max(0, Number(v) || 0);
+            this.ms = {...data.monthStats, netProfit: noNeg(data.monthStats && data.monthStats.netProfit) };
             this.expenses = data.expenses || [];
             this.billComparison = data.billComparison;
-            this.yr = data.year;
-            this.cashOnHand = data.cashOnHand || 0;
+            const yr = data.year || {};
+            this.yr = {
+                ...yr,
+                totals: {...(yr.totals || {}), netProfit: noNeg(yr.totals && yr.totals.netProfit) },
+                months: (yr.months || []).map(m => ({...m, netProfit: noNeg(m.netProfit) }))
+            };
+            this.cashOnHand = noNeg(data.cashOnHand);
         },
         async onMonthChange() {
             if (!this.month) return;
@@ -555,6 +565,9 @@ const Expenses = {
                 sub_category: Number(it.qty) > 1 ? it.sub_category.trim() + ' (' + Number(it.qty) + ' x ' + this.money(it.price) + ')' : it.sub_category.trim(),
                 amount: this.lineTotal(it)
             }));
+            const batchCheck = ExpensesController.validateBatch(this.form.expense_date, this.form.description, items);
+            if (!batchCheck.isValid) { this.alertBox('warning', 'Please check your entries', batchCheck.message); return; }
+
             const result = await this.post({ action: 'add_many', expense_date: this.form.expense_date, description: this.form.description, items });
             if (!result.success) { this.alertBox('error', 'Could not save', result.message || 'Something went wrong.'); return; }
 
@@ -603,6 +616,9 @@ const Expenses = {
                 this.alertBox('warning', 'Missing details', 'Enter the bill amount and date.');
                 return;
             }
+            const billCheck = ExpensesController.validateBill(this.utility.name, this.billForm.amount, this.billForm.expense_date);
+            if (!billCheck.isValid) { this.alertBox('warning', 'Please check the bill', billCheck.message); return; }
+
             const result = await this.post({ action: 'add', category: 'Utilities', sub_category: this.utility.name, amount: Number(this.billForm.amount), expense_date: this.billForm.expense_date, description: '' });
             if (!result.success) { this.alertBox('error', 'Could not save', result.message || 'Something went wrong.'); return; }
             this.billForm.amount = '';

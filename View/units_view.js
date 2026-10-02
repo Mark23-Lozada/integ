@@ -1,8 +1,27 @@
 const Units = {
     template: `
         <div class="space-y-6 min-h-full pb-10 transition-all duration-500 ease-out">
+            <!-- Smooth Animations Styles Injection -->
+            <style>
+                .unit-list-move,
+                .unit-list-enter-active,
+                .unit-list-leave-active {
+                    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .unit-list-enter-from,
+                .unit-list-leave-to {
+                    opacity: 0;
+                    transform: scale(0.95) translateY(10px);
+                }
+                .unit-list-leave-active {
+                    position: absolute;
+                    pointer-events: none;
+                    width: calc(100% - 1.25rem);
+                }
+            </style>
+
             <!-- Header & Action Button -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 transform transition-all duration-500 hover:translate-x-1">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 transform transition-all duration-500 hover:translate-x-1" data-aos="fade-right">
                 <div>
                     <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight transition-colors duration-300 hover:text-emerald-800 flex items-center gap-3">
                         <span class="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl text-xl shadow-inner border border-emerald-100/50">
@@ -13,7 +32,7 @@ const Units = {
                     <p class="text-sm text-gray-500 font-medium mt-1">Manage your boarding house rooms, bedspaces, and view unit photo galleries seamlessly.</p>
                 </div>
                 <button @click="openAddModal" class="inline-flex items-center justify-center gap-2.5 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-1 active:translate-y-0 transition-all duration-300 cursor-pointer group">
-                    <i class="fa-solid fa-plus group-hover:rotate-90 transition-transform duration-300"></i> Add New Unit/Room
+                    <i class="fa-solid fa-plus group-hover:rotate-90 transition-transform duration-300"></i> Add New Unit
                 </button>
             </div>
             <hr class="border-gray-100 transition-all duration-500 hover:border-emerald-500/50">
@@ -21,7 +40,7 @@ const Units = {
             <!-- Dashboard Layout: 50-50 Split -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
                 <!-- Left: 50% - Total Rooms + Occupancy Breakdown -->
-                <div class="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-emerald-950/10 transition-all duration-500 transform hover:-translate-y-1.5 flex flex-col justify-between group border border-gray-100 relative overflow-hidden">
+                <div class="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-emerald-950/10 transition-all duration-500 transform hover:-translate-y-1.5 flex flex-col justify-between group border border-gray-100 relative overflow-hidden" data-aos="fade-up" data-aos-delay="0">
                     <!-- Decorative Blur Background Glow -->
                     <div class="absolute -right-12 -bottom-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700 pointer-events-none"></div>
                     
@@ -29,7 +48,7 @@ const Units = {
                         <div class="flex items-center justify-between relative z-10">
                             <div>
                                 <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider transition-all duration-300 group-hover:text-emerald-700">TOTAL ROOMS / UNITS</p>
-                                <h3 class="text-4xl font-extrabold text-gray-900 mt-2 tracking-tight transition-transform duration-300 group-hover:scale-[1.02] origin-left">{{ units.length }}</h3>
+                                <h3 class="text-4xl font-extrabold text-gray-900 mt-2 tracking-tight transition-transform duration-300 group-hover:scale-[1.02] origin-left" v-countup>{{ units.length }}</h3>
                             </div>
                             <span class="px-3.5 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-semibold rounded-full border border-emerald-200/60 shadow-sm flex items-center gap-1.5 transition-all duration-300 group-hover:bg-emerald-500 group-hover:text-white group-hover:scale-105">
                                 <i class="fa-solid fa-door-closed"></i> Active Pool
@@ -58,10 +77,10 @@ const Units = {
                 <!-- Right: 50% - 3 Stacked Cards (Available, Occupied, Unavailable) -->
                 <div class="flex flex-col gap-3 justify-between">
                     <!-- Available Rooms Box -->
-                    <div class="bg-gradient-to-br from-emerald-50/50 to-white border border-emerald-100/80 px-5 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group">
+                    <div class="bg-gradient-to-br from-emerald-50/50 to-white border border-emerald-100/80 px-5 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group" data-aos="fade-up" data-aos-delay="100">
                         <div>
                             <p class="text-[11px] font-semibold text-emerald-900 uppercase tracking-wider group-hover:text-emerald-700 transition-colors">AVAILABLE</p>
-                            <h3 class="text-xl font-bold text-gray-900 mt-0.5 group-hover:text-emerald-600 transition-colors">{{ availableCount }}</h3>
+                            <h3 class="text-xl font-bold text-gray-900 mt-0.5 group-hover:text-emerald-600 transition-colors" v-countup>{{ availableCount }}</h3>
                         </div>
                         <span class="p-3 bg-emerald-500/10 text-emerald-600 text-sm font-semibold rounded-xl shadow-xs transition-all duration-300 group-hover:bg-emerald-500 group-hover:text-white group-hover:scale-110 group-hover:rotate-6">
                             <i class="fa-solid fa-bed"></i>
@@ -69,10 +88,10 @@ const Units = {
                     </div>
 
                     <!-- Occupied Units Box -->
-                    <div class="bg-gradient-to-br from-amber-50/50 to-white border border-amber-200/80 px-5 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-amber-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group">
+                    <div class="bg-gradient-to-br from-amber-50/50 to-white border border-amber-200/80 px-5 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-amber-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group" data-aos="fade-up" data-aos-delay="200">
                         <div>
                             <p class="text-[11px] font-semibold text-amber-900 uppercase tracking-wider group-hover:text-amber-700 transition-colors">OCCUPIED</p>
-                            <h3 class="text-xl font-bold text-gray-900 mt-0.5 group-hover:text-amber-600 transition-colors">{{ occupiedCount }}</h3>
+                            <h3 class="text-xl font-bold text-gray-900 mt-0.5 group-hover:text-amber-600 transition-colors" v-countup>{{ occupiedCount }}</h3>
                         </div>
                         <span class="p-3 bg-amber-500/10 text-amber-600 text-sm font-semibold rounded-xl shadow-xs transition-all duration-300 group-hover:bg-amber-500 group-hover:text-white group-hover:scale-110 group-hover:rotate-6">
                             <i class="fa-solid fa-users"></i>
@@ -80,10 +99,10 @@ const Units = {
                     </div>
 
                     <!-- Unavailable Rooms Box -->
-                    <div class="bg-gradient-to-br from-rose-50/50 to-white border border-rose-100/80 px-5 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-rose-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group">
+                    <div class="bg-gradient-to-br from-rose-50/50 to-white border border-rose-100/80 px-5 py-4 rounded-2xl shadow-sm hover:shadow-xl hover:border-rose-300 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-between group" data-aos="fade-up" data-aos-delay="0">
                         <div>
                             <p class="text-[11px] font-semibold text-rose-900 uppercase tracking-wider group-hover:text-rose-700 transition-colors">UNAVAILABLE</p>
-                            <h3 class="text-xl font-bold text-gray-900 mt-0.5 group-hover:text-rose-600 transition-colors">{{ unavailableCount }}</h3>
+                            <h3 class="text-xl font-bold text-gray-900 mt-0.5 group-hover:text-rose-600 transition-colors" v-countup>{{ unavailableCount }}</h3>
                         </div>
                         <span class="p-3 bg-rose-500/10 text-rose-600 text-sm font-semibold rounded-xl shadow-xs transition-all duration-300 group-hover:bg-rose-500 group-hover:text-white group-hover:scale-110 group-hover:rotate-6">
                             <i class="fa-solid fa-ban"></i>
@@ -93,7 +112,7 @@ const Units = {
             </div>
 
             <!-- Filter Tabs & Search / Type Filters -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-gray-100 p-4 rounded-2xl shadow-xl">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-gray-100 p-4 rounded-2xl shadow-xl" data-aos="fade-up" data-aos-delay="100">
                 <!-- Tabs -->
                 <div class="bg-gray-100/80 border border-gray-200/60 p-1 rounded-xl flex items-center gap-1 shadow-inner overflow-x-auto">
                     <button @click="currentTab = 'all'" :class="currentTab === 'all' ? 'bg-emerald-500 text-white font-bold shadow-md scale-105' : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-300 cursor-pointer shrink-0">
@@ -134,8 +153,8 @@ const Units = {
             </div>
 
             <!-- Units Grid View with Transition Group -->
-            <transition-group name="unit-list" tag="div" v-if="filteredUnits.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                <div v-for="unit in filteredUnits" :key="unit.id" class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-emerald-950/10 transition-all duration-500 transform hover:-translate-y-1.5 flex flex-col justify-between group">
+            <transition-group name="unit-list" tag="div" v-if="filteredUnits.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 relative">
+                <div v-for="(unit, uIdx) in filteredUnits" :key="unit.id" data-aos="fade-up" :data-aos-delay="(uIdx % 6) * 100" class="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-emerald-950/10 transition-all duration-300 transform hover:-translate-y-1.5 flex flex-col justify-between group">
                     <div>
                         <div class="relative h-48 w-full bg-gray-100 overflow-hidden cursor-pointer" @click="openGallery(unit)">
                             <img :src="unit.image || 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80'" alt="Unit Image" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out">

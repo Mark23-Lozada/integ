@@ -7,6 +7,16 @@ header("Content-Type: application/json; charset=UTF-8");
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
+// Any uncaught error (e.g. a database error) is returned as JSON,
+// so the UI shows the real message instead of "Unexpected end of JSON input".
+set_exception_handler(function ($e) {
+    error_log('tenant.php: ' . $e->getMessage());
+    echo json_encode(["success" => false, "message" => "Server error: " . $e->getMessage()]);
+    exit();
+});
+require_once __DIR__ . '/auth.php';
+require_login(); // session required
+
 $host = "localhost";
 $db = "integ_admin";
 $username = "root";
@@ -73,6 +83,31 @@ switch ($method) {
                 exit();
             }
 
+            // BACKEND CHECK: BAWAL EXTEND PAG HINDI PA FULLY PAID
+            $checkBalQuery = "SELECT COALESCE(c.monthly_rent, u.rate, 5000) as monthly_rent,
+                              COALESCE(c.contract_months, t.contract_months, 1) as contract_months,
+                              COALESCE(c.downpayment_amount, t.downpayment_amount, 0) as downpayment_amount,
+                              (SELECT COALESCE(SUM(amount), 0) FROM finances WHERE tenant_id = $tenant_id AND payment_type != 'Downpayment') as total_rent_paid
+                              FROM tenants t
+                              LEFT JOIN units u ON t.unit_id = u.id
+                              LEFT JOIN contracts c ON t.id = c.tenant_id AND c.contract_status = 'Active'
+                              WHERE t.id = $tenant_id";
+            $balRes = mysqli_query($con, $checkBalQuery);
+            if ($balRes && $bRow = mysqli_fetch_assoc($balRes)) {
+                $mRent = floatval($bRow['monthly_rent']);
+                $mMonths = intval($bRow['contract_months']);
+                $dp = floatval($bRow['downpayment_amount']);
+                $paid = floatval($bRow['total_rent_paid']);
+                $totalContract = $mRent * ($mMonths > 0 ? $mMonths : 1);
+                $rem = max(0, $totalContract - ($dp + $paid));
+
+                if ($rem > 0) {
+                    echo json_encode(["success" => false, "message" => "Bawal mag-extend ng kontrata kapag hindi pa fully paid! Natitirang balanse: ₱" . number_format($rem, 2)]);
+                    exit();
+                }
+            }
+
+            // PAGKALKULA NG BAGONG END DATE AT CONTRACT MODAL SAVING
             $new_end = date('Y-m-d', strtotime("+$extension_months months", strtotime($new_start)));
 
             $updateStmt = mysqli_prepare($con, "UPDATE contracts SET contract_status = 'Renewed' WHERE tenant_id = ? AND contract_status = 'Active'");
@@ -118,9 +153,18 @@ switch ($method) {
             exit();
         }
 
-        // ==========================================
-        // BACKEND DUPLICATE VALIDATION (Name, Email, Contact)
-        // ==========================================
+        // Move-in date must be a valid date and cannot be in the past (Philippine time)
+        $todayPH = (new DateTime('now', new DateTimeZone('Asia/Manila')))->format('Y-m-d');
+        $startCheck = DateTime::createFromFormat('Y-m-d', $start_date);
+        if (!$startCheck || $startCheck->format('Y-m-d') !== $start_date) {
+            echo json_encode(["success" => false, "message" => "Invalid move-in date!"]);
+            exit();
+        }
+        if ($start_date < $todayPH) {
+            echo json_encode(["success" => false, "message" => "The move-in date cannot be in the past."]);
+            exit();
+        }
+
         $checkDuplicate = mysqli_prepare($con, "SELECT id, fullname, email, contact_no FROM tenants WHERE fullname = ? OR email = ? OR contact_no = ?");
         mysqli_stmt_bind_param($checkDuplicate, "sss", $fullname, $email, $contact_no);
         mysqli_stmt_execute($checkDuplicate);
@@ -141,7 +185,6 @@ switch ($method) {
             }
         }
 
-        // Server-side validation for Family Members Age (1 to 100)
         $members = json_decode($members_json, true);
         if (is_array($members)) {
             foreach ($members as $m) {
@@ -180,7 +223,7 @@ switch ($method) {
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')";
                   
         $stmt = mysqli_prepare($con, $query);
-        mysqli_stmt_bind_param($stmt, "ssssssssssissds", $fullname, $birthdate, $gender, $contact_no, $email, $province_address, $valid_id_type, $valid_id_number, $emergency_contact_name, $emergency_contact_no, $unit_id, $start_date, $contract_months, $downpayment_status, $downpayment_amount);
+        mysqli_stmt_bind_param($stmt, "ssssssssssisisd", $fullname, $birthdate, $gender, $contact_no, $email, $province_address, $valid_id_type, $valid_id_number, $emergency_contact_name, $emergency_contact_no, $unit_id, $start_date, $contract_months, $downpayment_status, $downpayment_amount);
 
         if (mysqli_stmt_execute($stmt)) {
             $tenant_id = mysqli_insert_id($con);

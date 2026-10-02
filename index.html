@@ -11,11 +11,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
+    <!-- AOS (Animate On Scroll) CSS: local muna, CDN kapag hindi na-load -->
+    <link rel="stylesheet" href="Libraries/aos.css.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css'">
+
     <script src="Libraries/tailwind.js"></script>
 
     <!-- Vue 3 & Router CDN -->
     <script src="Libraries/vue.global.js"></script>
-    <script src="https://unpkg.com/vue-router@4"></script>
+    <script src="Libraries/vue-router.global.js"></script>
 
     <!-- Axios CDN -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -25,6 +28,14 @@
 
     <!-- Flatpickr JS -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <!-- AOS (Animate On Scroll) JS: local muna, CDN kapag hindi na-load -->
+    <script src="Libraries/AOS.js"></script>
+    <script>
+        if (typeof AOS === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"><\/script>');
+        }
+    </script>
 </head>
 
 <body class="bg-[#f5f5f5] m-0 p-0 overflow-x-hidden">
@@ -51,6 +62,9 @@
     <script src="Controller/expenses_controller.js"></script>
     <script src="Controller/finance_controller.js"></script>
 
+    <!-- 2.5 ANIMATION KIT (AOS bridge, count-up, chart/table animations) -->
+    <script src="View/animations.js"></script>
+
     <!-- 3. VIEWS (Tiyaking andito ang Login, Register, atbp. bago ang Router) -->
     <script src="View/login.js"></script>
     <script src="View/register.js"></script>
@@ -65,6 +79,8 @@
 
     <!-- 4. ROUTER -->
     <script src="Router/dashboard.js"></script>
+    <!-- 4.1 AUTH GUARD (bago) - dapat NASA IBABAW NG DASHBOARD.JS at bago ang Vue init -->
+    <script src="Router/auth_guard.js"></script>
 
     <!-- 5. VUE APP INITIALIZATION -->
     <script>
@@ -72,7 +88,9 @@
             const app = Vue.createApp({});
             if (typeof router !== 'undefined') {
                 app.use(router);
+                if (window.AnimationKit) AnimationKit.registerVue(app); // v-countup directive
                 app.mount('#app');
+                if (window.AnimationKit) AnimationKit.init(); // start AOS
             } else {
                 console.error("Router is not defined! Suriin ang Router/dashboard.js");
             }

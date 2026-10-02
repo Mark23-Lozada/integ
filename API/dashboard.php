@@ -1,6 +1,9 @@
 <?php
 header("Content-Type: application/json");
 include 'db.php';
+require_once __DIR__ . '/auth.php';
+require_login(); // session required
+
 
 $query = "SELECT names FROM users LIMIT 1";
 $result = $con->query($query);

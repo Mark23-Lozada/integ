@@ -8,6 +8,8 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 include 'db.php';
+require_once __DIR__ . '/auth.php';
+require_login(); // session required
 
 if (!$con) {
     echo json_encode(["success" => false, "message" => "Connection Failed: " . mysqli_connect_error()]);
@@ -126,7 +128,6 @@ switch ($method) {
         $unit_name = mysqli_real_escape_string($con, $tenantInfo['unit_name'] ?? 'Unassigned');
         $payment_date = date('Y-m-d H:i:s');
 
-        // Direktang isave sa 'finances' table
         $financeQuery = "INSERT INTO finances (tenant_id, tenant_name, unit_name, payment_type, amount, payment_date, status) 
                          VALUES ($tenant_id, '$tenant_name', '$unit_name', '$remarks', $amount_paid, '$payment_date', 'Paid')";
         

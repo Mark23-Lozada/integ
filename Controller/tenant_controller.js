@@ -32,6 +32,21 @@ const TenantController = {
         return { isValid: true };
     },
 
+    validateMoveInDate(dateString) {
+        if (!dateString) {
+            return { isValid: false, message: "Please select a move-in date!" };
+        }
+        if (isNaN(new Date(dateString).getTime())) {
+            return { isValid: false, message: "Invalid move-in date format!" };
+        }
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        if (dateString < todayStr) {
+            return { isValid: false, message: "The move-in date cannot be in the past. Choose today or a later date." };
+        }
+        return { isValid: true };
+    },
+
     validateMemberAge(ageVal, nameLabel = "Family Member") {
         const age = parseInt(ageVal);
         if (isNaN(age) || age < 1 || age > 100) {
@@ -61,6 +76,29 @@ const TenantController = {
             if (numAge < 18) {
                 return { isValid: false, message: `${nameLabel}: "Adult Child" must be 18 years old or older!` };
             }
+        }
+
+        return { isValid: true };
+    },
+
+    // DAGDAG: Validation para sa Renewal / Extension ng Contract
+    validateRenewal(renewalForm, tenant) {
+        if (!renewalForm || !renewalForm.start_date) {
+            return { isValid: false, message: "Please select a valid start date for the contract renewal!" };
+        }
+
+        const startDate = new Date(renewalForm.start_date);
+        if (isNaN(startDate.getTime())) {
+            return { isValid: false, message: "Invalid renewal start date format!" };
+        }
+
+        const contractMonths = parseInt(renewalForm.contract_months);
+        if (isNaN(contractMonths) || contractMonths <= 0) {
+            return { isValid: false, message: "Please select a valid contract extension duration!" };
+        }
+
+        if (!tenant || !tenant.id) {
+            return { isValid: false, message: "Invalid tenant selected for contract renewal!" };
         }
 
         return { isValid: true };
@@ -196,6 +234,12 @@ const TenantController = {
         const mainBdayCheck = this.validateBirthdate(form.birthdate, form.fullname || "Main Tenant");
         if (!mainBdayCheck.isValid) {
             Swal.fire('Input Error', mainBdayCheck.message, 'warning');
+            return false;
+        }
+
+        const moveInCheck = this.validateMoveInDate(form.start_date);
+        if (!moveInCheck.isValid) {
+            Swal.fire('Move-in Date Error', moveInCheck.message, 'warning');
             return false;
         }
 

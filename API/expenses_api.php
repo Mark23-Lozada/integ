@@ -5,10 +5,14 @@ header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
 
+date_default_timezone_set('Asia/Manila'); // Oras ng Pilipinas (UTC+8) para tama ang pagpalit ng buwan
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 include 'db.php';
+require_once __DIR__ . '/auth.php';
+require_login(); // session required
+
 
 const BUDGET_RATE = 0.30; // 30% of each month's collected rent goes to the Monthly Budget
 
@@ -22,6 +26,7 @@ if (!$con) {
     out(["success" => false, "message" => "Connection Failed: " . mysqli_connect_error()]);
 }
 mysqli_set_charset($con, "utf8mb4");
+mysqli_query($con, "SET time_zone = '+08:00'"); // Philippine Time din ang MySQL
 
 // ---------- Helpers ----------
 function rows($con, $sql, $types = '', $params = []) {
@@ -60,11 +65,38 @@ function ensureColumns($con) {
         }
     }
 }
+
+// Kung ENUM ang category column, gawing VARCHAR para tanggapin ang mga bagong category (Taxes & Permits, Salaries & Benefits).
+function ensureCategoryColumn($con) {
+    $r = mysqli_query($con, "SHOW COLUMNS FROM property_expenses LIKE 'category'");
+    if ($r && ($row = mysqli_fetch_assoc($r)) && stripos($row['Type'], 'enum') === 0) {
+        mysqli_query($con, "ALTER TABLE property_expenses MODIFY category VARCHAR(60) NOT NULL DEFAULT 'Admin/Others'");
+    }
+}
 ensureColumns($con);
+ensureCategoryColumn($con);
 
 // Older approved expenses (no budget_amount) count fully against the budget.
 const SQL_BUDGET_PART = "COALESCE(budget_amount, amount)";
 const SQL_OVERFLOW_PART = "COALESCE(overflow_amount, 0)";
+
+// Rollover: ang hindi nagastong budget ng mga nakaraang BUWAN (kalendaryo, hindi 30-araw na bilang) ay napupunta sa susunod na buwan.
+// Tumatakbong balanse kada buwan: balance = max(0, balance + 30% ng nakolekta - budget na nagamit)
+function carryOver($con, $ym) {
+    $start = $ym . '-01';
+    $inc = rows($con, "SELECT DATE_FORMAT(payment_date, '%Y-%m') AS ym, SUM(amount) AS t FROM finances WHERE payment_date < ? GROUP BY ym", 's', [$start]);
+    $use = rows($con, "SELECT DATE_FORMAT(expense_date, '%Y-%m') AS ym, SUM(" . SQL_BUDGET_PART . ") AS t FROM property_expenses WHERE status = 'Approved' AND expense_date < ? GROUP BY ym", 's', [$start]);
+    $c = []; $u = [];
+    foreach ($inc as $r) if ($r['ym']) $c[$r['ym']] = floatval($r['t']);
+    foreach ($use as $r) if ($r['ym']) $u[$r['ym']] = floatval($r['t']);
+    $months = array_unique(array_merge(array_keys($c), array_keys($u)));
+    sort($months);
+    $bal = 0.0;
+    foreach ($months as $m) {
+        $bal = max(0, round($bal + round(($c[$m] ?? 0) * BUDGET_RATE, 2) - ($u[$m] ?? 0), 2));
+    }
+    return $bal;
+}
 
 function monthStats($con, $ym) {
     list($s, $e) = monthRange($ym);
@@ -80,12 +112,16 @@ function monthStats($con, $ym) {
     $pending = scalar($con, "SELECT COALESCE(SUM(amount),0) FROM property_expenses WHERE status = 'Pending' AND expense_date >= ? AND expense_date < ?", 'ss', [$s, $e]);
 
     $pool = round($collected * BUDGET_RATE, 2);
+    $carry = carryOver($con, $ym);
+    $available = round($pool + $carry, 2);
     $budgetUsed = floatval($a['budget_used']);
-    $remaining = max(0, round($pool - $budgetUsed, 2));
+    $remaining = max(0, round($available - $budgetUsed, 2));
 
     return [
         "collected"       => $collected,
         "budgetPool"      => $pool,
+        "carryOver"       => $carry,
+        "budgetAvailable" => $available,
         "budgetUsed"      => $budgetUsed,
         "budgetRemaining" => $remaining,
         "overflow"        => floatval($a['overflow']),
@@ -196,13 +232,17 @@ if ($method === 'GET') {
         "budgetRate"  => BUDGET_RATE,
         "month"       => $month,
         "monthStats"  => monthStats($con, $month),
+        "prevMonth"   => date('Y-m', strtotime($month . '-01 -1 month')),
+        "prevMonthStats" => monthStats($con, date('Y-m', strtotime($month . '-01 -1 month'))),
         "expenses"    => $expenses,
         "billComparison" => [
-            "electricity" => utilityComparison($con, ['Electric', 'Meralco']),
-            "water"       => utilityComparison($con, ['Water', 'Tubig']),
-            "internet"    => utilityComparison($con, ['WiFi', 'Internet'])
+            "electricity" => utilityComparison($con, ['Electric', 'Meralco', 'Kuryente']),
+            "water"       => utilityComparison($con, ['Water', 'Tubig', 'Maynilad', 'Manila Water']),
+            "internet"    => utilityComparison($con, ['WiFi', 'Internet', 'Converge', 'PLDT', 'Globe'])
         ],
         "year"        => yearSummary($con, $year),
+        "allCollected" => $allCollected,
+        "allSpent"    => $allSpent,
         "cashOnHand"  => $allCollected - $allSpent
     ]);
 }
