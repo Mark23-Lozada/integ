@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 
 include 'db.php';
 require_once __DIR__ . '/auth.php';
-require_login(); // session required
+require_role(ROLE_LANDLORD); // landlord only
 
 
 const BUDGET_RATE = 0.30; // 30% of each month's collected rent goes to the Monthly Budget
@@ -73,8 +73,27 @@ function ensureCategoryColumn($con) {
         mysqli_query($con, "ALTER TABLE property_expenses MODIFY category VARCHAR(60) NOT NULL DEFAULT 'Admin/Others'");
     }
 }
+// Revised expenses: a title, an optional room, and an optional link to a damage report.
+function ensureExpenseColumns($con) {
+    $cols = ['title' => 'VARCHAR(150) NULL DEFAULT NULL', 'unit_id' => 'INT NULL DEFAULT NULL', 'damage_report_id' => 'INT NULL DEFAULT NULL'];
+    foreach ($cols as $col => $def) {
+        $r = mysqli_query($con, "SHOW COLUMNS FROM property_expenses LIKE '$col'");
+        if ($r && mysqli_num_rows($r) === 0) {
+            mysqli_query($con, "ALTER TABLE property_expenses ADD COLUMN $col $def");
+        }
+    }
+}
 ensureColumns($con);
 ensureCategoryColumn($con);
+ensureExpenseColumns($con);
+
+const EXPENSE_CATEGORIES = ['Supplies', 'Repairs', 'Taxes & Permits', 'Salaries & Benefits', 'Admin/Others', 'Utilities'];
+const UTILITY_NAMES = ['Electricity', 'Water', 'WiFi'];
+const UTILITY_KEYWORDS = [
+    'electricity' => ['Electric', 'Meralco', 'Kuryente'],
+    'water'       => ['Water', 'Tubig', 'Maynilad', 'Manila Water'],
+    'internet'    => ['WiFi', 'Internet', 'Converge', 'PLDT', 'Globe']
+];
 
 // Older approved expenses (no budget_amount) count fully against the budget.
 const SQL_BUDGET_PART = "COALESCE(budget_amount, amount)";
@@ -131,7 +150,7 @@ function monthStats($con, $ym) {
     ];
 }
 
-// Clause matching any of the given keywords in sub_category (English and older entries).
+// Clause for utility bills: category 'Utilities' AND the name matches one of the keywords (English and older entries).
 function likeClause($keywords, &$types, &$params) {
     $parts = [];
     foreach ($keywords as $k) {
@@ -139,7 +158,7 @@ function likeClause($keywords, &$types, &$params) {
         $types .= 's';
         $params[] = '%' . $k . '%';
     }
-    return $parts ? '(' . implode(' OR ', $parts) . ')' : '1=0';
+    return $parts ? "(category = 'Utilities' AND (" . implode(' OR ', $parts) . '))' : '1=0';
 }
 
 // Finds the latest month with a bill and compares it with the previous month that has a bill.
@@ -210,8 +229,40 @@ if ($method === 'OPTIONS') out(["success" => true]);
 if ($method === 'GET') {
     if (($_GET['action'] ?? '') === 'utility_history') {
         $types = ''; $params = []; $where = likeClause(array_filter(array_map('trim', explode(',', $_GET['sub_category'] ?? ''))), $types, $params);
-        $history = rows($con, "SELECT id, category, sub_category, amount, expense_date, status FROM property_expenses WHERE $where ORDER BY expense_date DESC, id DESC", $types, $params);
+        // Optional room filter: unit_id=5 -> that room, unit_id=none -> whole-property bills
+        $unitFilter = $_GET['unit_id'] ?? '';
+        if ($unitFilter === 'none') {
+            $where .= ' AND e.unit_id IS NULL';
+        } elseif (intval($unitFilter) > 0) {
+            $where .= ' AND e.unit_id = ?'; $types .= 'i'; $params[] = intval($unitFilter);
+        }
+        $history = rows($con, "SELECT e.id, e.category, e.sub_category, e.amount, e.expense_date, e.status, e.unit_id, u.name AS unit_name
+                               FROM property_expenses e LEFT JOIN units u ON u.id = e.unit_id
+                               WHERE $where ORDER BY e.expense_date DESC, e.id DESC", $types, $params);
         out(["success" => true, "history" => $history]);
+    }
+
+    // Bar graph data for one utility: monthly totals per room for a year (room id 0 = whole property)
+    if (($_GET['action'] ?? '') === 'utility_chart') {
+        $type = $_GET['type'] ?? '';
+        if (!isset(UTILITY_KEYWORDS[$type])) out(["success" => false, "message" => "Unknown utility type."]);
+        $year = intval($_GET['year'] ?? date('Y'));
+        if ($year < 2000 || $year > 2100) $year = intval(date('Y'));
+
+        $types = ''; $params = []; $where = likeClause(UTILITY_KEYWORDS[$type], $types, $params);
+        $rowsM = rows($con, "SELECT COALESCE(unit_id, 0) AS uid, MONTH(expense_date) AS m, SUM(amount) AS total
+                             FROM property_expenses
+                             WHERE $where AND expense_date >= ? AND expense_date < ?
+                             GROUP BY uid, m", $types . 'ss', array_merge($params, [$year . '-01-01', ($year + 1) . '-01-01']));
+
+        $byUnit = [];
+        foreach ($rowsM as $r) {
+            $uid = (string)intval($r['uid']);
+            if (!isset($byUnit[$uid])) $byUnit[$uid] = array_fill(0, 12, 0);
+            $byUnit[$uid][intval($r['m']) - 1] = floatval($r['total']);
+        }
+        $units = rows($con, "SELECT id, name FROM units ORDER BY name");
+        out(["success" => true, "type" => $type, "year" => $year, "units" => $units, "by_unit" => (object)$byUnit]);
     }
 
     $month = $_GET['month'] ?? date('Y-m');
@@ -221,7 +272,8 @@ if ($method === 'GET') {
 
     list($s, $e) = monthRange($month);
 
-    $expenses = rows($con, "SELECT * FROM property_expenses WHERE expense_date >= ? AND expense_date < ? ORDER BY expense_date DESC, id DESC", 'ss', [$s, $e]);
+    $expenses = rows($con, "SELECT e.*, u.name AS unit_name FROM property_expenses e LEFT JOIN units u ON u.id = e.unit_id
+                            WHERE e.expense_date >= ? AND e.expense_date < ? ORDER BY e.expense_date DESC, e.id DESC", 'ss', [$s, $e]);
 
     // Cash on hand (all time): total collected minus all approved expenses
     $allCollected = scalar($con, "SELECT COALESCE(SUM(amount),0) FROM finances");
@@ -235,10 +287,11 @@ if ($method === 'GET') {
         "prevMonth"   => date('Y-m', strtotime($month . '-01 -1 month')),
         "prevMonthStats" => monthStats($con, date('Y-m', strtotime($month . '-01 -1 month'))),
         "expenses"    => $expenses,
+        "units"       => rows($con, "SELECT id, name FROM units ORDER BY name"),
         "billComparison" => [
-            "electricity" => utilityComparison($con, ['Electric', 'Meralco', 'Kuryente']),
-            "water"       => utilityComparison($con, ['Water', 'Tubig', 'Maynilad', 'Manila Water']),
-            "internet"    => utilityComparison($con, ['WiFi', 'Internet', 'Converge', 'PLDT', 'Globe'])
+            "electricity" => utilityComparison($con, UTILITY_KEYWORDS['electricity']),
+            "water"       => utilityComparison($con, UTILITY_KEYWORDS['water']),
+            "internet"    => utilityComparison($con, UTILITY_KEYWORDS['internet'])
         ],
         "year"        => yearSummary($con, $year),
         "allCollected" => $allCollected,
@@ -310,59 +363,39 @@ if ($method === 'POST') {
         out(["success" => true, "message" => $msg]);
     }
 
-    // ADD MANY (several items in one save, all Pending)
-    if ($action === 'add_many') {
-        $items = $data['items'] ?? [];
-        $expense_date = trim($data['expense_date'] ?? '');
-        $description = trim($data['description'] ?? '');
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $expense_date)) $expense_date = date('Y-m-d');
-
-        if (!is_array($items) || count($items) === 0 || count($items) > 50) {
-            out(["success" => false, "message" => "Add between 1 and 50 items."]);
-        }
-
-        $clean = [];
-        $total = 0;
-        foreach ($items as $it) {
-            $cat = trim($it['category'] ?? '');
-            $sub = trim($it['sub_category'] ?? '');
-            $amt = floatval($it['amount'] ?? 0);
-            if ($cat === '' || $sub === '' || $amt <= 0) {
-                out(["success" => false, "message" => "An item is missing its category, name, or amount."]);
-            }
-            $clean[] = [$cat, $sub, $amt];
-            $total += $amt;
-        }
-
-        mysqli_begin_transaction($con);
-        $stmt = mysqli_prepare($con, "INSERT INTO property_expenses (category, sub_category, amount, expense_date, description, status) VALUES (?, ?, ?, ?, ?, 'Pending')");
-        mysqli_stmt_bind_param($stmt, "ssdss", $c, $sc, $a, $expense_date, $description);
-        foreach ($clean as $row) {
-            list($c, $sc, $a) = $row;
-            if (!mysqli_stmt_execute($stmt)) {
-                mysqli_rollback($con);
-                out(["success" => false, "message" => "Save error: " . mysqli_error($con)]);
-            }
-        }
-        mysqli_commit($con);
-        out(["success" => true, "message" => count($clean) . " item(s) added (₱" . number_format($total, 2) . ", pending approval)."]);
-    }
-
-    // ADD (Pending)
+    // ADD (Pending): ONE expense = title + category + amount + date (+ note, + room, + linked damage report)
     $category = trim($data['category'] ?? '');
-    $sub_category = trim($data['sub_category'] ?? '');
+    $title = trim($data['title'] ?? ($data['sub_category'] ?? ''));
     $amount = floatval($data['amount'] ?? 0);
     $expense_date = trim($data['expense_date'] ?? '');
     $description = trim($data['description'] ?? '');
+    $unit_id = !empty($data['unit_id']) ? intval($data['unit_id']) : null;
+    $damage_id = !empty($data['damage_report_id']) ? intval($data['damage_report_id']) : null;
 
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $expense_date)) $expense_date = date('Y-m-d');
+    if (!in_array($category, EXPENSE_CATEGORIES, true)) out(["success" => false, "message" => "Please choose a valid category."]);
+    if ($title === '' || mb_strlen($title) > 150) out(["success" => false, "message" => "The title is required (maximum 150 characters)."]);
+    if (!($amount > 0) || $amount > 9999999) out(["success" => false, "message" => "Enter a valid amount."]);
+    if (mb_strlen($description) > 255) out(["success" => false, "message" => "The description is too long (maximum 255 characters)."]);
+    $dt = DateTime::createFromFormat('Y-m-d', $expense_date);
+    if (!$dt || $dt->format('Y-m-d') !== $expense_date) out(["success" => false, "message" => "Enter a valid date."]);
 
-    if ($category === '' || $sub_category === '' || $amount <= 0) {
-        out(["success" => false, "message" => "Please fill in the category, item name, and a valid amount."]);
+    if ($unit_id !== null && !rows($con, "SELECT id FROM units WHERE id = ?", 'i', [$unit_id])) {
+        out(["success" => false, "message" => "That room does not exist."]);
+    }
+    if ($damage_id !== null && !rows($con, "SELECT id FROM damage_reports WHERE id = ?", 'i', [$damage_id])) {
+        out(["success" => false, "message" => "That damage report does not exist."]);
     }
 
-    $stmt = mysqli_prepare($con, "INSERT INTO property_expenses (category, sub_category, amount, expense_date, description, status) VALUES (?, ?, ?, ?, ?, 'Pending')");
-    mysqli_stmt_bind_param($stmt, "ssdss", $category, $sub_category, $amount, $expense_date, $description);
+    // Utility bills: the title is the utility name (the cards and the graph search it).
+    // Electricity and water are billed per room, so a room is required for them.
+    if ($category === 'Utilities') {
+        if (!in_array($title, UTILITY_NAMES, true)) out(["success" => false, "message" => "Unknown utility type."]);
+        if ($title !== 'WiFi' && $unit_id === null) out(["success" => false, "message" => "Choose the room this $title bill belongs to."]);
+    }
+
+    // sub_category keeps the same text as the title so older reports and searches keep working
+    $stmt = mysqli_prepare($con, "INSERT INTO property_expenses (category, sub_category, title, amount, expense_date, description, status, unit_id, damage_report_id) VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?)");
+    mysqli_stmt_bind_param($stmt, "sssdssii", $category, $title, $title, $amount, $expense_date, $description, $unit_id, $damage_id);
     if (mysqli_stmt_execute($stmt)) out(["success" => true, "message" => "Expense added (pending approval)."]);
     out(["success" => false, "message" => "Save error: " . mysqli_error($con)]);
 }

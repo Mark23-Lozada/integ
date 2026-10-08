@@ -10,7 +10,7 @@ error_reporting(E_ALL);
 
 include 'db.php';
 require_once __DIR__ . '/auth.php';
-require_login(); // session required
+require_role(ROLE_LANDLORD); // landlord only
 
 
 if (!$con) {
@@ -78,8 +78,45 @@ switch ($method) {
             exit();
         }
 
-        $stmt = mysqli_prepare($con, "INSERT INTO finances (tenant_id, tenant_name, unit_name, payment_type, amount, payment_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        mysqli_stmt_bind_param($stmt, "isssdss", $tenant_id, $tenant_name, $unit_name, $payment_type, $amount, $payment_date, $status);
+        // Tie the payment to the tenant's ACTIVE contract and block overpayment for that contract.
+        $contract_id = null;
+        if ($tenant_id) {
+            $bq = mysqli_prepare($con, "SELECT c.id AS contract_id,
+                        COALESCE(c.monthly_rent, u.rate, 5000) AS monthly_rent,
+                        COALESCE(c.contract_months, t.contract_months, 1) AS contract_months,
+                        COALESCE(c.downpayment_amount, t.downpayment_amount, 0) AS downpayment_amount,
+                        (SELECT COALESCE(SUM(f.amount), 0) FROM finances f
+                          WHERE f.tenant_id = t.id AND f.payment_type != 'Downpayment' AND f.contract_id <=> c.id) AS total_rent_paid
+                    FROM tenants t
+                    LEFT JOIN units u ON t.unit_id = u.id
+                    LEFT JOIN contracts c ON t.id = c.tenant_id AND c.contract_status = 'Active'
+                    WHERE t.id = ?
+                    ORDER BY c.id DESC LIMIT 1");
+            mysqli_stmt_bind_param($bq, "i", $tenant_id);
+            mysqli_stmt_execute($bq);
+            $b = mysqli_fetch_assoc(mysqli_stmt_get_result($bq));
+            mysqli_stmt_close($bq);
+
+            if ($b) {
+                $contract_id = $b['contract_id'] !== null ? (int)$b['contract_id'] : null;
+
+                if ($payment_type !== 'Downpayment') {
+                    $months = intval($b['contract_months']);
+                    $total = floatval($b['monthly_rent']) * ($months > 0 ? $months : 1);
+                    $remaining = max(0, $total - (floatval($b['downpayment_amount']) + floatval($b['total_rent_paid'])));
+                    if (round($amount, 2) > round($remaining, 2)) {
+                        echo json_encode([
+                            "success" => false,
+                            "message" => "Bawal ang sumobrang bayad! Ang natitirang balanse para sa kabuuang kontrata ay ₱" . number_format($remaining, 2) . " lamang."
+                        ]);
+                        exit();
+                    }
+                }
+            }
+        }
+
+        $stmt = mysqli_prepare($con, "INSERT INTO finances (tenant_id, contract_id, tenant_name, unit_name, payment_type, amount, payment_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        mysqli_stmt_bind_param($stmt, "iisssdss", $tenant_id, $contract_id, $tenant_name, $unit_name, $payment_type, $amount, $payment_date, $status);
 
         if (mysqli_stmt_execute($stmt)) {
             echo json_encode([

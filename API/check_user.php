@@ -2,7 +2,8 @@
 header("Content-Type: application/json");
 include 'db.php';
 
-$query = "SELECT COUNT(*) as count FROM users";
+// Only LANDLORD accounts count: tenant logins must not close or open registration.
+$query = "SELECT COUNT(*) as count FROM users WHERE role = 'landlord'";
 $result = mysqli_query($con, $query);
 
 if ($result) {

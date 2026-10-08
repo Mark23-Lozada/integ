@@ -1,7 +1,7 @@
 const TenantModel = {
     async getAll() {
         try {
-            const response = await fetch('API/tenant.php');
+            const response = await fetch('api/tenant.php');
             const data = await response.json();
             return Array.isArray(data) ? data : [];
         } catch (e) {
@@ -12,7 +12,7 @@ const TenantModel = {
 
     async getAvailableUnits() {
         try {
-            const response = await fetch('API/tenant.php?action=available_units');
+            const response = await fetch('api/tenant.php?action=available_units');
             const data = await response.json();
             return Array.isArray(data) ? data : [];
         } catch (e) {
@@ -23,7 +23,7 @@ const TenantModel = {
 
     async save(formData) {
         try {
-            const response = await fetch('API/tenant.php', {
+            const response = await fetch('api/tenant.php', {
                 method: 'POST',
                 body: formData
             });
@@ -36,7 +36,7 @@ const TenantModel = {
 
     async renewContract(formData) {
         try {
-            const response = await fetch('API/tenant.php?action=renew_contract', {
+            const response = await fetch('api/tenant.php?action=renew_contract', {
                 method: 'POST',
                 body: formData
             });
@@ -47,9 +47,24 @@ const TenantModel = {
         }
     },
 
+    async createAccount(tenantId) {
+        try {
+            const formData = new FormData();
+            formData.append('tenant_id', tenantId);
+            const response = await fetch('api/tenant.php?action=create_account', {
+                method: 'POST',
+                body: formData
+            });
+            return await response.json();
+        } catch (e) {
+            console.error("Error creating tenant login", e);
+            return { success: false, message: "Network error occurred." };
+        }
+    },
+
     async delete(id) {
         try {
-            const response = await fetch(`API/tenant.php?id=${id}`, {
+            const response = await fetch(`api/tenant.php?id=${id}`, {
                 method: 'DELETE'
             });
             return await response.json();

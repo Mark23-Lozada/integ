@@ -49,30 +49,40 @@ if (isset($data['gmail']) && isset($data['password'])) {
         exit;
     }
 
-    $stmt = $con->prepare("SELECT password, names FROM users WHERE gmail = ?");
+    $stmt = $con->prepare("SELECT password, names, role, tenant_id, must_change_password FROM users WHERE gmail = ?");
     if ($stmt) {
         $stmt->bind_param("s", $user);
         $stmt->execute();
         $stmt->store_result();
 
         if ($stmt->num_rows > 0) {
-            $stmt->bind_result($hashed_password, $names);
+            $stmt->bind_result($hashed_password, $names, $role, $tenant_id, $must_change);
             $stmt->fetch();
             $stmt->close();
 
             if (password_verify($pass, $hashed_password)) {
+                // A tenant login must point to a tenant record
+                if ($role === 'tenant' && empty($tenant_id)) {
+                    login_fail("This tenant account is not linked to a tenant record. Contact your landlord.");
+                }
+
                 // New session ID on login (prevents session fixation)
                 session_regenerate_id(true);
                 $_SESSION = [];
                 $_SESSION['gmail'] = $user;
                 $_SESSION['names'] = $names;
+                $_SESSION['role'] = $role;
+                $_SESSION['tenant_id'] = $role === 'tenant' ? (int)$tenant_id : null;
+                $_SESSION['must_change_password'] = (int)$must_change;
                 $_SESSION['last_activity'] = time();
                 $_SESSION['ua'] = hash('sha256', $_SERVER['HTTP_USER_AGENT'] ?? '');
 
                 echo json_encode([
                     "status" => "success",
                     "message" => "Login successful!",
-                    "names" => $names
+                    "names" => $names,
+                    "role" => $role,
+                    "must_change_password" => (bool)$must_change
                 ]);
             } else {
                 login_fail("Invalid Gmail or password!");

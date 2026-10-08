@@ -4,12 +4,13 @@ header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
 
+date_default_timezone_set('Asia/Manila');
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 include 'db.php';
 require_once __DIR__ . '/auth.php';
-require_login(); // session required
+require_role(ROLE_LANDLORD); // landlord only
 
 if (!$con) {
     echo json_encode(["success" => false, "message" => "Connection Failed: " . mysqli_connect_error()]);
@@ -27,7 +28,7 @@ switch ($method) {
                       COALESCE(c.monthly_rent, u.rate, 5000) as monthly_rent,
                       COALESCE(c.contract_months, t.contract_months, 1) as contract_months,
                       COALESCE(c.downpayment_amount, t.downpayment_amount, 0) as downpayment_amount,
-                      (SELECT COALESCE(SUM(amount), 0) FROM finances WHERE tenant_id = t.id AND payment_type != 'Downpayment') as total_rent_paid
+                      (SELECT COALESCE(SUM(f.amount), 0) FROM finances f WHERE f.tenant_id = t.id AND f.payment_type != 'Downpayment' AND f.contract_id <=> c.id) as total_rent_paid
                       FROM tenants t
                       LEFT JOIN units u ON t.unit_id = u.id
                       LEFT JOIN contracts c ON t.id = c.tenant_id AND c.contract_status = 'Active'";
@@ -99,7 +100,8 @@ switch ($method) {
         $balQuery = mysqli_query($con, "SELECT COALESCE(c.monthly_rent, u.rate, 5000) as monthly_rent, 
                                         COALESCE(c.contract_months, t.contract_months, 1) as contract_months,
                                         COALESCE(c.downpayment_amount, t.downpayment_amount, 0) as downpayment_amount,
-                                        (SELECT COALESCE(SUM(amount), 0) FROM finances WHERE tenant_id = $tenant_id AND payment_type != 'Downpayment') as total_rent_paid,
+                                        (SELECT COALESCE(SUM(f.amount), 0) FROM finances f WHERE f.tenant_id = $tenant_id AND f.payment_type != 'Downpayment' AND f.contract_id <=> c.id) as total_rent_paid,
+                                        c.id AS contract_id,
                                         t.fullname, COALESCE(u.name, 'Unassigned') as unit_name
                                         FROM tenants t 
                                         LEFT JOIN units u ON t.unit_id = u.id 
@@ -127,9 +129,10 @@ switch ($method) {
         $tenant_name = mysqli_real_escape_string($con, $tenantInfo['fullname'] ?? 'Unknown Tenant');
         $unit_name = mysqli_real_escape_string($con, $tenantInfo['unit_name'] ?? 'Unassigned');
         $payment_date = date('Y-m-d H:i:s');
+        $contractIdSql = (isset($tenantInfo['contract_id']) && $tenantInfo['contract_id'] !== null) ? intval($tenantInfo['contract_id']) : 'NULL';
 
-        $financeQuery = "INSERT INTO finances (tenant_id, tenant_name, unit_name, payment_type, amount, payment_date, status) 
-                         VALUES ($tenant_id, '$tenant_name', '$unit_name', '$remarks', $amount_paid, '$payment_date', 'Paid')";
+        $financeQuery = "INSERT INTO finances (tenant_id, contract_id, tenant_name, unit_name, payment_type, amount, payment_date, status) 
+                         VALUES ($tenant_id, $contractIdSql, '$tenant_name', '$unit_name', '$remarks', $amount_paid, '$payment_date', 'Paid')";
         
         if (mysqli_query($con, $financeQuery)) {
             $payment_id = mysqli_insert_id($con);

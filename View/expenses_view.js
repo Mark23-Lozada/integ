@@ -9,7 +9,7 @@ const Expenses = {
                     <p class="text-sm text-gray-500 font-medium">{{ budgetPercent }}% of each month's collected rent goes to the Monthly Budget.</p>
                 </div>
                 <button @click="openAddModal" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 cursor-pointer">
-                    <i class="fa-solid fa-plus"></i> Add Expenses
+                    <i class="fa-solid fa-plus"></i> Add Expense
                 </button>
             </div>
             <hr class="border-gray-100 transition-all duration-500 hover:border-emerald-500/50">
@@ -169,7 +169,7 @@ const Expenses = {
                             <tr>
                                 <th class="p-3 rounded-l-xl">Date</th>
                                 <th class="p-3">Category</th>
-                                <th class="p-3">Item</th>
+                                <th class="p-3">Expense</th>
                                 <th class="p-3">Amount</th>
                                 <th class="p-3">Status</th>
                                 <th class="p-3 rounded-r-xl text-right">Actions</th>
@@ -179,7 +179,7 @@ const Expenses = {
                             <tr v-for="exp in expenses" :key="exp.id" class="hover:bg-emerald-50/60 transition-all duration-200">
                                 <td class="p-3 text-gray-600 font-medium">{{ exp.expense_date }}</td>
                                 <td class="p-3 font-semibold text-gray-900">{{ exp.category }}</td>
-                                <td class="p-3 text-gray-600 font-medium">{{ exp.sub_category }}<span v-if="exp.description" class="block text-[10px] text-gray-400">{{ exp.description }}</span></td>
+                                <td class="p-3 text-gray-600 font-medium">{{ exp.title || exp.sub_category }}<span v-if="exp.unit_name" class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 align-middle">{{ exp.unit_name }}</span><span v-if="exp.damage_report_id" class="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 align-middle" title="Linked to a damage report">Damage report</span><span v-if="exp.description" class="block text-[10px] text-gray-400">{{ exp.description }}</span></td>
                                 <td class="p-3 font-bold text-rose-600">{{ money(exp.amount) }}</td>
                                 <td class="p-3">
                                     <span :class="exp.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'" class="inline-block px-2.5 py-1 text-[10px] font-semibold rounded-full border">{{ exp.status }}</span>
@@ -241,100 +241,145 @@ const Expenses = {
                 <p class="text-xs text-gray-400 mt-4">Cash on hand (all time, collected minus approved expenses): <span class="font-bold text-gray-600">{{ money(cashOnHand) }}</span></p>
             </div>
 
-            <!-- Modal: add expenses (several items) -->
+            <!-- Modal: add ONE expense -->
             <div v-if="showModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div class="bg-white rounded-2xl w-full max-w-3xl p-6 shadow-2xl border border-gray-100 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-gray-100 space-y-4 max-h-[90vh] overflow-y-auto">
                     <div class="pb-4 border-b border-gray-100">
-                        <h3 class="text-lg font-extrabold text-gray-900 tracking-tight">Add Expenses</h3>
-                        <p class="text-xs text-gray-500 mt-0.5">Add as many items as you need in one save. For electricity, water, and internet, click a utility card instead.</p>
+                        <h3 class="text-lg font-extrabold text-gray-900 tracking-tight">Add Expense</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">One expense: what it was, how much, and when. For electricity, water, and internet, click a utility card instead.</p>
                     </div>
-                    <form @submit.prevent="saveExpense" class="space-y-4">
+                    <form @submit.prevent="saveExpense" class="space-y-3">
                         <div>
-                            <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Expense date</label>
-                            <input type="date" v-model="form.expense_date" required class="w-full sm:w-56 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
+                            <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Title</label>
+                            <input type="text" v-model="form.title" maxlength="150" placeholder="e.g. Fixed broken door lock" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
                         </div>
-
-                        <div class="space-y-2">
-                            <div class="hidden sm:grid grid-cols-12 gap-2 text-[11px] font-semibold text-gray-400 uppercase px-1">
-                                <span class="col-span-2">Category</span>
-                                <span class="col-span-4">Item</span>
-                                <span class="col-span-1">Qty</span>
-                                <span class="col-span-2">Unit Price</span>
-                                <span class="col-span-2 text-right">Subtotal</span>
-                            </div>
-                            <div v-for="(item, i) in form.items" :key="item.key" class="grid grid-cols-12 gap-2 items-center">
-                                <select v-model="item.category" class="col-span-12 sm:col-span-2 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Category</label>
+                                <select v-model="form.category" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
                                     <option value="Supplies">Supplies</option>
                                     <option value="Repairs">Repairs</option>
                                     <option value="Taxes & Permits">Taxes &amp; Permits (BIR, Mayor's permit, RPT)</option>
                                     <option value="Salaries & Benefits">Salaries &amp; Benefits (SSS, PhilHealth, Pag-IBIG)</option>
                                     <option value="Admin/Others">Admin / Other</option>
                                 </select>
-                                <input type="text" v-model="item.sub_category" :id="'item-name-' + item.key" placeholder="Enter Materials" class="col-span-12 sm:col-span-4 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
-                                <input type="number" min="1" step="1" v-model="item.qty" title="Quantity" class="col-span-3 sm:col-span-1 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
-                                <input type="number" step="0.01" min="0" v-model="item.price" @keydown.enter.prevent="nextRow(i)" placeholder="0.00" title="Price of one" class="col-span-4 sm:col-span-2 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
-                                <span class="col-span-4 sm:col-span-2 text-right text-sm font-bold text-gray-700">{{ money(lineTotal(item)) }}</span>
-                                <button type="button" @click="removeItem(i)" :disabled="form.items.length === 1" title="Remove item" class="col-span-1 text-gray-400 hover:text-rose-600 disabled:opacity-30 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
                             </div>
-                            <button type="button" @click="addItem" class="w-full py-2.5 border-2 border-dashed border-emerald-500/50 text-emerald-600 hover:bg-emerald-500/5 text-sm font-bold rounded-xl transition-all duration-300 cursor-pointer"><i class="fa-solid fa-plus"></i> Add another item</button>
-                            <p class="text-[11px] text-gray-400">One row per kind of item. Press Enter in the price field to jump to the next row.</p>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Expense date</label>
+                                <input type="date" v-model="form.expense_date" required class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
+                            </div>
                         </div>
-
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Amount (₱)</label>
+                                <input type="number" step="0.01" min="0" v-model="form.amount" placeholder="0.00" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Room (optional)</label>
+                                <select v-model="form.unit_id" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
+                                    <option value="">Whole property</option>
+                                    <option v-for="u in units" :key="u.id" :value="String(u.id)">{{ u.name }}</option>
+                                </select>
+                            </div>
+                        </div>
                         <div>
-                            <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Note (optional, applies to all items)</label>
-                            <input type="text" v-model="form.description" placeholder="e.g. Bought at the market" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
-                        </div>
-
-                        <div class="flex justify-between items-center bg-gray-50/80 border border-gray-100 rounded-xl px-4 py-3">
-                            <span class="text-sm font-semibold text-gray-600">Total ({{ filledItems.length }} {{ filledItems.length === 1 ? 'item' : 'items' }})</span>
-                            <span class="text-lg font-extrabold text-rose-600">{{ money(formTotal) }}</span>
+                            <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Description (optional)</label>
+                            <textarea v-model="form.description" rows="3" maxlength="255" placeholder="Details of the expense" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400"></textarea>
                         </div>
 
                         <p v-if="formOverBudget" class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                            This total is more than the remaining budget ({{ money(ms.budgetRemaining) }}). When approved, the excess will be taken from profit.
+                            This amount is more than the remaining budget ({{ money(ms.budgetRemaining) }}). When approved, the excess will be taken from profit.
                         </p>
 
                         <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
                             <button type="button" @click="showModal = false" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-all duration-200 cursor-pointer">Cancel</button>
-                            <button type="submit" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer">Save All</button>
+                            <button type="submit" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer">Save Expense</button>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- Modal: utility bill -->
+            <!-- Modal: utility bill (rooms above a bar graph) -->
             <div v-if="showUtility" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-gray-100 space-y-4 max-h-[85vh] overflow-y-auto">
+                <div class="bg-white rounded-2xl w-full max-w-3xl p-6 shadow-2xl border border-gray-100 space-y-4 max-h-[92vh] overflow-y-auto">
                     <div class="flex justify-between items-center pb-4 border-b border-gray-100">
                         <h3 class="text-lg font-extrabold text-gray-900 tracking-tight">{{ utility.title }}</h3>
                         <button @click="showUtility = false" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer">Close</button>
                     </div>
 
+                    <!-- Rooms: one tab per room, so the bills of each room stay separate -->
+                    <div>
+                        <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Room</p>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button v-for="t in chartTabs" :key="t.key" @click="selectTab(t.key)" :class="chartTab === t.key ? 'bg-emerald-500 text-white font-bold shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer">{{ t.label }}</button>
+                        </div>
+                    </div>
+
+                    <!-- Graph controls -->
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-xs text-gray-500 font-medium">{{ chartCaption }}</p>
+                        <div v-if="chartTab === 'all'" class="bg-gray-100/80 border border-gray-200/60 p-1 rounded-xl shadow-inner">
+                            <input type="month" v-model="chartMonth" @change="onChartMonthChange" class="bg-white px-3 py-1.5 text-xs font-semibold rounded-lg text-gray-700 outline-none cursor-pointer shadow-sm">
+                        </div>
+                        <div v-else class="bg-gray-100/80 border border-gray-200/60 p-1 rounded-xl shadow-inner">
+                            <select v-model.number="chartYear" @change="loadChart" class="bg-white px-3 py-1.5 text-xs font-semibold rounded-lg text-gray-700 outline-none cursor-pointer shadow-sm">
+                                <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Bar graph (hand-built SVG, same style as the other charts) -->
+                    <div class="bg-gray-50/80 border border-gray-100 rounded-2xl p-4">
+                        <svg class="w-full h-52" viewBox="0 0 500 190">
+                            <line x1="0" y1="30" x2="500" y2="30" stroke="#e2e8f0" stroke-dasharray="4" />
+                            <line x1="0" y1="90" x2="500" y2="90" stroke="#e2e8f0" stroke-dasharray="4" />
+                            <line x1="0" y1="150" x2="500" y2="150" stroke="#cbd5e1" />
+                            <g v-for="(b, i) in chartBars" :key="chartTab + '-' + i">
+                                <rect :x="b.x" :y="b.y" :width="b.w" :height="b.h" rx="4" :fill="b.value > 0 ? utility.bar : '#e5e7eb'"></rect>
+                                <text v-if="b.value > 0" :x="b.x + b.w / 2" :y="b.y - 5" font-size="9" font-weight="700" fill="#374151" text-anchor="middle">{{ compact(b.value) }}</text>
+                                <text :x="b.x + b.w / 2" y="168" font-size="9" font-weight="600" fill="#6b7280" text-anchor="middle">{{ b.label }}</text>
+                            </g>
+                        </svg>
+                        <p v-if="chartTotal === 0" class="text-center text-xs text-gray-400 font-medium -mt-1">No bills recorded for this view yet.</p>
+                        <p v-else class="text-center text-xs text-gray-500 font-semibold -mt-1">Total: <span class="text-gray-800">{{ money(chartTotal) }}</span></p>
+                    </div>
+
+                    <!-- Add a bill -->
                     <div class="bg-gray-50/80 border border-gray-100 rounded-xl p-4 space-y-3">
                         <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Add a bill</p>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Room</label>
+                                <select v-model="billForm.unit_id" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white">
+                                    <option v-if="utility.wholeOk" value="">Whole property</option>
+                                    <option v-else disabled value="">Choose a room</option>
+                                    <option v-for="u in units" :key="u.id" :value="String(u.id)">{{ u.name }}</option>
+                                </select>
+                            </div>
                             <div>
                                 <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Amount (₱)</label>
-                                <input type="number" step="0.01" min="0" v-model="billForm.amount" placeholder="0.00" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
+                                <input type="number" step="0.01" min="0" v-model="billForm.amount" placeholder="0.00" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white">
                             </div>
                             <div>
                                 <label class="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Bill date</label>
-                                <input type="date" v-model="billForm.expense_date" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400">
+                                <input type="date" v-model="billForm.expense_date" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white">
                             </div>
                         </div>
-                        <p class="text-[11px] text-gray-400">The month of the date is the bill month. For an October bill, pick a date in October.</p>
+                        <p class="text-[11px] text-gray-400">The month of the date is the bill month. {{ utility.wholeOk ? 'Internet can be billed to the whole property.' : 'This bill is recorded per room.' }}</p>
                         <button type="button" @click="saveBill" class="w-full px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer">Save Bill</button>
                     </div>
 
+                    <!-- History of the selected room -->
                     <div>
-                        <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-2">History</p>
+                        <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-2">History <span class="text-gray-400 normal-case font-medium">({{ chartTabLabel }})</span></p>
                         <div v-if="utilityHistory.length === 0" class="flex flex-col items-center justify-center py-8 text-center">
                             <i class="fa-solid fa-file-invoice text-gray-300 text-3xl mb-2 animate-bounce"></i>
                             <p class="text-xs font-medium text-gray-400">No bills recorded yet.</p>
                         </div>
-                        <ul v-else class="divide-y divide-gray-50">
+                        <ul v-else class="divide-y divide-gray-50 max-h-56 overflow-y-auto custom-scrollbar">
                             <li v-for="h in utilityHistory" :key="h.id" class="py-2.5 flex justify-between items-center text-xs hover:bg-emerald-50/60 transition-all duration-200 px-2 rounded-lg">
                                 <span class="text-gray-600 font-medium">{{ h.expense_date }}
+                                    <span v-if="chartTab === 'all'" class="ml-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700">{{ h.unit_name || 'Whole property' }}</span>
                                     <span :class="h.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'" class="ml-1 inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full border">{{ h.status }}</span>
                                 </span>
                                 <span class="font-bold text-rose-600">{{ money(h.amount) }}</span>
@@ -353,6 +398,7 @@ const Expenses = {
             budgetPercent: 30,
             ms: { collected: 0, budgetPool: 0, carryOver: 0, budgetAvailable: 0, budgetUsed: 0, budgetRemaining: 0, overflow: 0, totalSpent: 0, pending: 0, netProfit: 0 },
             expenses: [],
+            units: [],
             billComparison: {
                 electricity: { current: 0, previous: 0, diff: 0, percentage: 0, isIncrease: true, currentMonth: null, previousMonth: null },
                 water: { current: 0, previous: 0, diff: 0, percentage: 0, isIncrease: true, currentMonth: null, previousMonth: null },
@@ -363,9 +409,11 @@ const Expenses = {
             utilities: [{
                     key: 'electricity',
                     label: 'Electricity',
-                    title: 'Electricity Bill',
+                    title: 'Electricity Bills',
                     name: 'Electricity',
                     search: 'Electric,Meralco,Kuryente',
+                    wholeOk: false,
+                    bar: '#f59e0b',
                     icon: 'fa-solid fa-bolt',
                     card: 'from-amber-50/60 border-amber-200/80 hover:border-amber-400',
                     text: 'text-amber-800',
@@ -374,9 +422,11 @@ const Expenses = {
                 {
                     key: 'water',
                     label: 'Water',
-                    title: 'Water Bill',
+                    title: 'Water Bills',
                     name: 'Water',
                     search: 'Water,Tubig,Maynilad,Manila Water',
+                    wholeOk: false,
+                    bar: '#3b82f6',
                     icon: 'fa-solid fa-faucet-drip',
                     card: 'from-blue-50/50 border-blue-100/80 hover:border-blue-300',
                     text: 'text-blue-900',
@@ -385,9 +435,11 @@ const Expenses = {
                 {
                     key: 'internet',
                     label: 'Internet',
-                    title: 'Internet Bill',
+                    title: 'Internet Bills',
                     name: 'WiFi',
                     search: 'WiFi,Internet,Converge,PLDT,Globe',
+                    wholeOk: true,
+                    bar: '#8b5cf6',
                     icon: 'fa-solid fa-wifi',
                     card: 'from-purple-50/60 border-purple-200/80 hover:border-purple-400',
                     text: 'text-purple-800',
@@ -397,11 +449,14 @@ const Expenses = {
             monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
             showModal: false,
             showUtility: false,
-            utility: { title: '', name: '', search: '' },
+            utility: { key: '', title: '', name: '', search: '', wholeOk: false, bar: '#10b981' },
             utilityHistory: [],
-            itemSeq: 0,
-            billForm: { amount: '', expense_date: '' },
-            form: { expense_date: '', description: '', items: [] }
+            chartData: { by_unit: {}, units: [] },
+            chartTab: 'all',
+            chartYear: Number(month.slice(0, 4)),
+            chartMonth: month,
+            billForm: { amount: '', expense_date: '', unit_id: '' },
+            form: { title: '', category: 'Supplies', amount: '', expense_date: '', unit_id: '', description: '' }
         };
     },
     computed: {
@@ -422,18 +477,60 @@ const Expenses = {
         utilityCards() {
             return this.utilities.map(u => ({...u, b: this.billComparison[u.key] }));
         },
-        filledItems() {
-            return this.form.items.filter(it => it.sub_category.trim() !== '' && Number(it.qty) > 0 && Number(it.price) > 0);
-        },
-        formTotal() {
-            return this.filledItems.reduce((sum, it) => sum + this.lineTotal(it), 0);
-        },
         formOverBudget() {
-            return this.formTotal > 0 && (this.form.expense_date || '').startsWith(this.month) && this.formTotal > this.ms.budgetRemaining;
+            const amt = Number(this.form.amount);
+            return amt > 0 && (this.form.expense_date || '').startsWith(this.month) && amt > this.ms.budgetRemaining;
         },
         yearOptions() {
             const now = new Date().getFullYear();
             return [now - 3, now - 2, now - 1, now, now + 1];
+        },
+
+        // ---------- Utility modal: tabs + bar graph ----------
+        chartHasWhole() {
+            const w = this.chartData.by_unit['0'];
+            return !!w && w.some(v => v > 0);
+        },
+        chartTabs() {
+            const tabs = [{ key: 'all', label: 'All rooms' }];
+            this.chartData.units.forEach(u => tabs.push({ key: String(u.id), label: u.name }));
+            if (this.chartHasWhole || this.utility.wholeOk) tabs.push({ key: '0', label: 'Whole property' });
+            return tabs;
+        },
+        chartTabLabel() {
+            const t = this.chartTabs.find(x => x.key === this.chartTab);
+            return t ? t.label : '';
+        },
+        chartItems() {
+            const by = this.chartData.by_unit;
+            if (this.chartTab === 'all') {
+                // one column per room, for the chosen month
+                const m = Number((this.chartMonth || '').slice(5, 7)) - 1;
+                const items = this.chartData.units.map(u => ({ label: u.name, value: (by[String(u.id)] || [])[m] || 0 }));
+                if (this.chartHasWhole) items.push({ label: 'Property', value: (by['0'] || [])[m] || 0 });
+                return items;
+            }
+            // one column per month, for the chosen room and year
+            const arr = by[this.chartTab] || [];
+            return this.monthNames.map((n, i) => ({ label: n.slice(0, 3), value: arr[i] || 0 }));
+        },
+        chartBars() {
+            const items = this.chartItems;
+            if (!items.length) return [];
+            const max = Math.max(...items.map(i => i.value), 1);
+            const slot = 480 / items.length;
+            const w = Math.min(44, slot * 0.62);
+            return items.map((it, i) => {
+                const h = it.value > 0 ? Math.max(3, (it.value / max) * 112) : 3;
+                return { x: 10 + i * slot + (slot - w) / 2, y: 150 - h, w, h, value: it.value, label: it.label.length > 9 ? it.label.slice(0, 8) + '.' : it.label };
+            });
+        },
+        chartTotal() {
+            return this.chartItems.reduce((s, i) => s + i.value, 0);
+        },
+        chartCaption() {
+            if (this.chartTab === 'all') return 'Each column is one room, for ' + this.monthText(this.chartMonth) + '.';
+            return this.chartTabLabel + ': each column is one month of ' + this.chartYear + '.';
         }
     },
     created() { this.load(); },
@@ -458,10 +555,10 @@ const Expenses = {
         money(val) {
             return '₱' + Number(val || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
-        lineTotal(it) {
-            const qty = Number(it.qty) || 0;
-            const price = Number(it.price) || 0;
-            return Math.round(qty * price * 100) / 100;
+        compact(v) {
+            if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+            if (v >= 1000) return (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k';
+            return Math.round(v);
         },
 
         // ---------- SweetAlert ----------
@@ -505,6 +602,7 @@ const Expenses = {
             const noNeg = (v) => Math.max(0, Number(v) || 0);
             this.ms = {...data.monthStats, netProfit: noNeg(data.monthStats && data.monthStats.netProfit) };
             this.expenses = data.expenses || [];
+            this.units = data.units || [];
             this.billComparison = data.billComparison;
             const yr = data.year || {};
             this.yr = {
@@ -525,50 +623,31 @@ const Expenses = {
             this.load();
         },
 
-        // ---------- Add expenses ----------
-        focusItem(key) {
-            this.$nextTick(() => {
-                const el = document.getElementById('item-name-' + key);
-                if (el) el.focus();
-            });
-        },
-        newItem() {
-            this.itemSeq += 1;
-            return { key: this.itemSeq, category: 'Supplies', sub_category: '', qty: 1, price: '' };
-        },
-        addItem() {
-            const it = this.newItem();
-            this.form.items.push(it);
-            this.focusItem(it.key);
-        },
-        nextRow(i) {
-            if (i >= this.form.items.length - 1) this.addItem();
-            else this.focusItem(this.form.items[i + 1].key);
-        },
-        removeItem(i) { if (this.form.items.length > 1) this.form.items.splice(i, 1); },
+        // ---------- Add one expense ----------
         openAddModal() {
             this.form = {
+                title: '',
+                category: 'Supplies',
+                amount: '',
                 expense_date: this.month === this.currentMonth() ? this.today() : this.month + '-01',
-                description: '',
-                items: [this.newItem(), this.newItem(), this.newItem()]
+                unit_id: '',
+                description: ''
             };
             this.showModal = true;
         },
         async saveExpense() {
-            // Fully empty rows are ignored; a row with only a name or only a price is an error
-            const incomplete = this.form.items.some(it => (it.sub_category.trim() !== '') !== (Number(it.price) > 0) || (it.sub_category.trim() !== '' && !(Number(it.qty) > 0)));
-            if (incomplete) { this.alertBox('warning', 'Incomplete item', 'Each item needs a name, a quantity, and a price.'); return; }
-            if (this.filledItems.length === 0) { this.alertBox('warning', 'No items', 'Add at least one item before saving.'); return; }
+            const check = ExpensesController.validateExpense(this.form);
+            if (!check.isValid) { this.alertBox('warning', 'Please check your entries', check.message); return; }
 
-            const items = this.filledItems.map(it => ({
-                category: it.category,
-                sub_category: Number(it.qty) > 1 ? it.sub_category.trim() + ' (' + Number(it.qty) + ' x ' + this.money(it.price) + ')' : it.sub_category.trim(),
-                amount: this.lineTotal(it)
-            }));
-            const batchCheck = ExpensesController.validateBatch(this.form.expense_date, this.form.description, items);
-            if (!batchCheck.isValid) { this.alertBox('warning', 'Please check your entries', batchCheck.message); return; }
-
-            const result = await this.post({ action: 'add_many', expense_date: this.form.expense_date, description: this.form.description, items });
+            const result = await this.post({
+                action: 'add',
+                title: this.form.title.trim(),
+                category: this.form.category,
+                amount: Number(this.form.amount),
+                expense_date: this.form.expense_date,
+                description: this.form.description.trim(),
+                unit_id: this.form.unit_id ? Number(this.form.unit_id) : null
+            });
             if (!result.success) { this.alertBox('error', 'Could not save', result.message || 'Something went wrong.'); return; }
 
             this.showModal = false;
@@ -599,30 +678,65 @@ const Expenses = {
             await this.load();
         },
 
-        // ---------- Utility bills ----------
+        // ---------- Utility bills: room tabs + bar graph ----------
         async openUtilityModal(u) {
-            this.utility = { title: u.title, name: u.name, search: u.search };
+            this.utility = { key: u.key, title: u.title, name: u.name, search: u.search, wholeOk: u.wholeOk, bar: u.bar };
             this.utilityHistory = [];
-            this.billForm = { amount: '', expense_date: this.today() };
+            this.chartData = { by_unit: {}, units: [] };
+            this.chartTab = 'all';
+            // open on the latest month that has a bill (or this month)
+            const latest = this.billComparison[u.key] && this.billComparison[u.key].currentMonth;
+            this.chartMonth = latest || this.currentMonth();
+            this.chartYear = Number(this.chartMonth.slice(0, 4));
+            this.billForm = { amount: '', expense_date: this.today(), unit_id: u.wholeOk ? '' : '' };
             this.showUtility = true;
+            await this.loadChart();
             await this.loadUtilityHistory();
         },
+        async loadChart() {
+            const data = await this.api({ cache: 'no-store' }, '?action=utility_chart&type=' + this.utility.key + '&year=' + this.chartYear);
+            if (data.success) this.chartData = { by_unit: data.by_unit || {}, units: data.units || [] };
+        },
+        async selectTab(key) {
+            this.chartTab = key;
+            // the bill form follows the selected room
+            if (key !== 'all') this.billForm.unit_id = key === '0' ? '' : key;
+            await this.loadUtilityHistory();
+        },
+        async onChartMonthChange() {
+            if (!this.chartMonth) return;
+            const y = Number(this.chartMonth.slice(0, 4));
+            if (y !== this.chartYear) { this.chartYear = y; await this.loadChart(); }
+        },
         async loadUtilityHistory() {
-            const data = await this.api({}, '?action=utility_history&sub_category=' + encodeURIComponent(this.utility.search));
+            let q = '?action=utility_history&sub_category=' + encodeURIComponent(this.utility.search);
+            if (this.chartTab === '0') q += '&unit_id=none';
+            else if (this.chartTab !== 'all') q += '&unit_id=' + encodeURIComponent(this.chartTab);
+            const data = await this.api({}, q);
             if (data.success) this.utilityHistory = data.history || [];
         },
         async saveBill() {
-            if (!(Number(this.billForm.amount) > 0) || !this.billForm.expense_date) {
-                this.alertBox('warning', 'Missing details', 'Enter the bill amount and date.');
-                return;
-            }
-            const billCheck = ExpensesController.validateBill(this.utility.name, this.billForm.amount, this.billForm.expense_date);
-            if (!billCheck.isValid) { this.alertBox('warning', 'Please check the bill', billCheck.message); return; }
+            const check = ExpensesController.validateBill(this.utility.name, this.billForm.amount, this.billForm.expense_date, this.billForm.unit_id);
+            if (!check.isValid) { this.alertBox('warning', 'Please check the bill', check.message); return; }
 
-            const result = await this.post({ action: 'add', category: 'Utilities', sub_category: this.utility.name, amount: Number(this.billForm.amount), expense_date: this.billForm.expense_date, description: '' });
+            const result = await this.post({
+                action: 'add',
+                category: 'Utilities',
+                title: this.utility.name,
+                amount: Number(this.billForm.amount),
+                expense_date: this.billForm.expense_date,
+                description: '',
+                unit_id: this.billForm.unit_id ? Number(this.billForm.unit_id) : null
+            });
             if (!result.success) { this.alertBox('error', 'Could not save', result.message || 'Something went wrong.'); return; }
             this.billForm.amount = '';
             this.toast(true, result.message);
+            // show the month of the bill that was just saved
+            const saved = this.billForm.expense_date.slice(0, 7);
+            if (this.chartTab === 'all') this.chartMonth = saved;
+            const y = Number(saved.slice(0, 4));
+            if (y !== this.chartYear) this.chartYear = y;
+            await this.loadChart();
             await this.loadUtilityHistory();
             await this.load();
         }

@@ -146,6 +146,9 @@ const Tenants = {
                                     </button>
                                 </td>
                                 <td class="py-3 px-4 text-center space-x-1">
+                                    <button @click="manageLogin(t)" :title="Number(t.has_account) ? 'Reset the tenant password' : 'Create the tenant login'" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-xs font-bold transition-all duration-300 hover:scale-105 cursor-pointer shadow-xs">
+                                        <i class="fa-solid fa-key mr-1"></i> {{ Number(t.has_account) ? 'Reset Login' : 'Create Login' }}
+                                    </button>
                                     <button @click="openRenewModal(t)" class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl text-xs font-bold transition-all duration-300 hover:scale-105 cursor-pointer shadow-xs">
                                         <i class="fa-solid fa-file-pen mr-1"></i> Renew Contract
                                     </button>
@@ -748,7 +751,11 @@ const Tenants = {
                 this.viewingContractAgreed = false;
                 this.resetForm();
                 this.fetchTenants();
-                Swal.fire('Successfully Registered!', res.message, 'success');
+                if (res.account) {
+                    this.showCredentials(res.account, 'Successfully Registered!');
+                } else {
+                    Swal.fire('Successfully Registered!', res.message, 'success');
+                }
             } else {
                 // Error -> Swal muna, tapos balik sa Register form na buo pa ang data
                 await Swal.fire('Registration Failed', res.message, 'error');
@@ -847,6 +854,40 @@ const Tenants = {
                 // Error -> Swal muna, tapos balik sa Renewal form na buo pa ang data
                 await Swal.fire('Error!', res.message, 'error');
                 this.cancelContractReview();
+            }
+        },
+        // Shows the tenant's portal login ONCE (the password is never stored in readable form)
+        showCredentials(account, title) {
+            const esc = (v) => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            return Swal.fire({
+                icon: 'success',
+                title: title,
+                html: '<div style="text-align:left;font-size:14px;line-height:1.8">Give these to the tenant. The password is shown <b>only once</b>, and the tenant must change it at the first login.<br><br>' +
+                    '<b>Login (email):</b> ' + esc(account.email) + '<br>' +
+                    '<b>Temporary password:</b> <code style="font-size:16px;background:#f3f4f6;padding:2px 8px;border-radius:6px">' + esc(account.temp_password) + '</code></div>',
+                confirmButtonColor: '#10b981',
+                confirmButtonText: 'I have copied it'
+            });
+        },
+        async manageLogin(tenant) {
+            if (Number(tenant.has_account)) {
+                const ok = await Swal.fire({
+                    title: 'Reset password?',
+                    text: tenant.fullname + ' will get a new temporary password and must change it at the next login.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#10b981',
+                    cancelButtonColor: '#9ca3af',
+                    confirmButtonText: 'Yes, reset it'
+                });
+                if (!ok.isConfirmed) return;
+            }
+            const res = await TenantModel.createAccount(tenant.id);
+            if (res.success && res.account) {
+                this.fetchTenants();
+                this.showCredentials(res.account, res.message);
+            } else {
+                Swal.fire('Error!', res.message || 'Could not create the login.', 'error');
             }
         },
         async deleteTenant(id) {

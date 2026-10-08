@@ -102,6 +102,7 @@ const LoginView = {
             if (result.status === 'success') {
                 localStorage.setItem('adminName', result.names);
                 localStorage.setItem('isAuthenticated', 'true');
+                localStorage.setItem('role', result.role || 'landlord');
 
                 Swal.fire({
                     icon: 'success',
@@ -113,7 +114,7 @@ const LoginView = {
                     timer: 1500,
                     showConfirmButton: false
                 }).then(() => {
-                    this.$router.push('/dashboard');
+                    this.$router.push(AuthService.homeFor(result.role)); // landlord -> /landlord/dashboard, tenant -> /tenant/dashboard
                 });
             } else {
                 Swal.fire({

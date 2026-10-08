@@ -19,6 +19,12 @@
         rowDelays += 'tbody > tr:nth-child(' + i + '){animation-delay:' + (0.04 * i).toFixed(2) + 's}';
     }
 
+    /* menu items sit between section headings, so cover the first 16 children of the nav */
+    var navDelays = '';
+    for (var n = 1; n <= 16; n++) {
+        navDelays += '.nav-link:nth-child(' + n + '){animation-delay:' + (0.15 + 0.04 * n).toFixed(2) + 's}';
+    }
+
     var css = [
         /* AOS start positions (high specificity so Tailwind's "transform" class can't cancel them) */
         '[data-aos="fade-up"]:not(.aos-animate){transform:translate3d(0,36px,0)!important}',
@@ -60,8 +66,7 @@
         /* Sidebar nav links: staggered slide-in (CSS only, safe with router-link-active) */
         '@keyframes ppNavIn{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}',
         '.nav-link{animation:ppNavIn .6s cubic-bezier(.22,1,.36,1) backwards}',
-        '.nav-link:nth-child(1){animation-delay:.20s}.nav-link:nth-child(2){animation-delay:.25s}.nav-link:nth-child(3){animation-delay:.30s}',
-        '.nav-link:nth-child(4){animation-delay:.35s}.nav-link:nth-child(5){animation-delay:.40s}.nav-link:nth-child(6){animation-delay:.45s}',
+        navDelays,
 
         /* Reduced motion */
         '@media (prefers-reduced-motion: reduce){.nav-link,tbody > tr,.pp-chart-line,.pp-chart-area,.pp-chart-point,.fixed.inset-0.z-50,.fixed.inset-0.z-50 > div{animation:none!important}.pp-chart-line{stroke-dasharray:none}}'

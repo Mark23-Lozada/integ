@@ -11,30 +11,19 @@ const DashboardLayout = {
                     <p class="text-xs text-gray-300 mt-1 font-medium">Cozy Apartment & Budget Journal</p>
                 </div>
                 
-               <!-- Navigation Links -->
-<nav class="flex flex-col gap-1.5">
-    <router-link to="/dashboard" class="nav-link group relative overflow-hidden flex items-center gap-3 px-3.5 py-3 text-base font-medium rounded-xl text-white hover:bg-[#86ef1c]/15 hover:translate-x-1.5 transition-all duration-200">
-        <i class="fa-solid fa-chart-pie w-5 text-center "><span></span></i> Dashboard
-    </router-link>
-    <router-link to="/units" class="nav-link group relative overflow-hidden flex items-center gap-3 px-3.5 py-3 text-base font-medium rounded-xl text-white hover:bg-[#86ef1c]/15 hover:translate-x-1.5 transition-all duration-200">
-        <i class="fa-solid fa-building w-5 text-center "><span></span></i> Units
-    </router-link>
-    <router-link to="/tenants" class="nav-link group relative overflow-hidden flex items-center gap-3 px-3.5 py-3 text-base font-medium rounded-xl text-white hover:bg-[#86ef1c]/15 hover:translate-x-1.5 transition-all duration-200">
-        <i class="fa-solid fa-users w-5 text-center "><span></span></i> Tenants
-    </router-link>
-    <router-link to="/rent" class="nav-link group relative overflow-hidden flex items-center gap-3 px-3.5 py-3 text-base font-medium rounded-xl text-white hover:bg-[#86ef1c]/15 hover:translate-x-1.5 transition-all duration-200">
-        <i class="fa-solid fa-file-invoice-dollar w-5 text-center "><span></span></i> Rent
-    </router-link>
-    <router-link to="/expenses" class="nav-link group relative overflow-hidden flex items-center gap-3 px-3.5 py-3 text-base font-medium rounded-xl text-white hover:bg-[#86ef1c]/15 hover:translate-x-1.5 transition-all duration-200">
-        <i class="fa-solid fa-wallet w-5 text-center "><span></span></i> Expenses
-    </router-link>
-    <router-link to="/finance" class="nav-link group relative overflow-hidden flex items-center gap-3 px-3.5 py-3 text-base font-medium rounded-xl text-white hover:bg-[#86ef1c]/15 hover:translate-x-1.5 transition-all duration-200">
-        <i class="fa-solid fa-chart-line w-5 text-center "><span></span></i> Finance
-    </router-link>
-</nav>
+               <!-- Navigation Links (grouped) -->
+                <nav class="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto pr-1">
+                    <template v-for="sec in sections" :key="sec.title">
+                        <p class="px-3.5 pt-3 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ sec.title }}</p>
+                        <router-link v-for="l in sec.links" :key="l.to" :to="l.to" class="nav-link group relative overflow-hidden flex items-center gap-3 px-3.5 py-2.5 text-[15px] font-medium rounded-xl text-white hover:bg-[#86ef1c]/15 hover:translate-x-1.5 transition-all duration-200">
+                            <i :class="'fa-solid ' + l.icon + ' w-5 text-center'"></i> {{ l.label }}
+                            <span v-if="l.badge && counts[l.badge] > 0" class="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">{{ counts[l.badge] > 99 ? '99+' : counts[l.badge] }}</span>
+                        </router-link>
+                    </template>
+                </nav>
 
                 <!-- Logout Button -->
-                <button @click="logout" data-aos="fade-up" data-aos-delay="550" class="mt-auto w-full py-3 px-4 rounded-xl border border-gray-700 text-gray-300 font-medium text-base bg-[#235347] hover:bg-red-500 hover:text-white hover:border-transparent shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2">
+                <button @click="logout" data-aos="fade-up" data-aos-delay="550" class="mt-3 w-full py-3 px-4 rounded-xl border border-gray-700 text-gray-300 font-medium text-base bg-[#235347] hover:bg-red-500 hover:text-white hover:border-transparent shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2">
                     <i class="fa-solid fa-right-from-bracket"><span></span></i> Logout
                 </button>
             </div>
@@ -65,10 +54,36 @@ const DashboardLayout = {
     `,
     data() {
         return {
-            adminName: 'Admin'
+            adminName: 'Admin',
+            counts: { pending_damage: 0, unread_chat: 0 },
+            countsTimer: null,
+            sections: [
+                { title: 'Dashboard', links: [
+                    { to: '/landlord/dashboard', icon: 'fa-chart-pie', label: 'Dashboard' },
+                    { to: '/landlord/chat', icon: 'fa-comments', label: 'Chat', badge: 'unread_chat' }
+                ] },
+                { title: 'Building Management', links: [
+                    { to: '/landlord/tenants', icon: 'fa-users', label: 'Tenants' },
+                    { to: '/landlord/damage-report', icon: 'fa-screwdriver-wrench', label: 'Damage Report', badge: 'pending_damage' },
+                    { to: '/landlord/units', icon: 'fa-building', label: 'Units' }
+                ] },
+                { title: 'Billings', links: [
+                    { to: '/landlord/finance', icon: 'fa-chart-line', label: 'Finance' },
+                    { to: '/landlord/billings', icon: 'fa-file-invoice', label: 'Billings' },
+                    { to: '/landlord/rent', icon: 'fa-file-invoice-dollar', label: 'Rent' },
+                    { to: '/landlord/expenses', icon: 'fa-wallet', label: 'Expenses' }
+                ] }
+            ]
         }
     },
     methods: {
+        // Menu badges: pending damage reports + unread tenant messages (passive GET, never extends the session)
+        async loadCounts() {
+            try {
+                const res = await axios.get('api/landlord_counts.php');
+                if (res.data && res.data.success) this.counts = { pending_damage: res.data.pending_damage, unread_chat: res.data.unread_chat };
+            } catch (e) { /* the guard handles 401 */ }
+        },
         fetchAdminName() {
             const savedName = localStorage.getItem('adminName');
             if (savedName) {
@@ -97,5 +112,12 @@ const DashboardLayout = {
     },
     mounted() {
         this.fetchAdminName();
+        this.loadCounts();
+        this.countsTimer = setInterval(this.loadCounts, 30000);
+        window.addEventListener('pp-refresh-counts', this.loadCounts); // pages ask for a refresh after reading chat / reports
+    },
+    beforeUnmount() {
+        if (this.countsTimer) clearInterval(this.countsTimer);
+        window.removeEventListener('pp-refresh-counts', this.loadCounts);
     }
 };

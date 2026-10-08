@@ -15,7 +15,8 @@ set_exception_handler(function ($e) {
     exit();
 });
 require_once __DIR__ . '/auth.php';
-require_login(); // session required
+require_role(ROLE_LANDLORD); // landlord only
+require_once __DIR__ . '/billing_lib.php';
 
 $host = "localhost";
 $db = "integ_admin";
@@ -34,6 +35,52 @@ if (!$con) {
 
 mysqli_set_charset($con, "utf8mb4");
 
+// ---------- Tenant portal accounts ----------
+function generate_temp_password($len = 10) {
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'; // no look-alikes (0/O, 1/l/I)
+    $out = '';
+    for ($i = 0; $i < $len; $i++) $out .= $chars[random_int(0, strlen($chars) - 1)];
+    return $out;
+}
+
+// Creates the portal login of a tenant, or resets its password if it already exists.
+// Returns ['ok' => bool, 'password' => temp password, 'created' => bool, 'message' => error text]
+function provision_tenant_account($con, $tenant_id, $email, $fullname) {
+    $temp = generate_temp_password();
+    $hash = password_hash($temp, PASSWORD_DEFAULT);
+
+    $q = mysqli_prepare($con, "SELECT 1 FROM users WHERE tenant_id = ?");
+    mysqli_stmt_bind_param($q, "i", $tenant_id);
+    mysqli_stmt_execute($q);
+    $exists = mysqli_fetch_assoc(mysqli_stmt_get_result($q));
+    mysqli_stmt_close($q);
+
+    if ($exists) {
+        $u = mysqli_prepare($con, "UPDATE users SET password = ?, must_change_password = 1 WHERE tenant_id = ? AND role = 'tenant'");
+        mysqli_stmt_bind_param($u, "si", $hash, $tenant_id);
+        $ok = mysqli_stmt_execute($u);
+        mysqli_stmt_close($u);
+        return ['ok' => $ok, 'password' => $temp, 'created' => false, 'message' => $ok ? '' : mysqli_error($con)];
+    }
+
+    // The tenant's email becomes the login: it must not belong to another account
+    $q = mysqli_prepare($con, "SELECT 1 FROM users WHERE gmail = ?");
+    mysqli_stmt_bind_param($q, "s", $email);
+    mysqli_stmt_execute($q);
+    $taken = mysqli_fetch_assoc(mysqli_stmt_get_result($q));
+    mysqli_stmt_close($q);
+    if ($taken) {
+        return ['ok' => false, 'password' => '', 'created' => false, 'message' => "This email is already used by another login account."];
+    }
+
+    $i = mysqli_prepare($con, "INSERT INTO users (gmail, password, names, role, tenant_id, must_change_password) VALUES (?, ?, ?, 'tenant', ?, 1)");
+    mysqli_stmt_bind_param($i, "sssi", $email, $hash, $fullname, $tenant_id);
+    $ok = mysqli_stmt_execute($i);
+    $err = $ok ? '' : mysqli_error($con);
+    mysqli_stmt_close($i);
+    return ['ok' => $ok, 'password' => $temp, 'created' => true, 'message' => $err];
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
@@ -51,10 +98,12 @@ switch ($method) {
 
         $query = "SELECT t.*, u.name as unit_name, u.rate as unit_rate, 
                   c.id as contract_id, c.start_date as contract_start, c.end_date as contract_end, 
-                  c.contract_months, c.monthly_rent, c.downpayment_amount, c.downpayment_status, c.contract_status 
+                  c.contract_months, c.monthly_rent, c.downpayment_amount, c.downpayment_status, c.contract_status,
+                  (ua.tenant_id IS NOT NULL) AS has_account 
                   FROM tenants t 
                   LEFT JOIN units u ON t.unit_id = u.id 
                   LEFT JOIN contracts c ON t.id = c.tenant_id AND c.contract_status = 'Active'
+                  LEFT JOIN users ua ON ua.tenant_id = t.id
                   ORDER BY t.id DESC";
                   
         $result = mysqli_query($con, $query);
@@ -87,7 +136,7 @@ switch ($method) {
             $checkBalQuery = "SELECT COALESCE(c.monthly_rent, u.rate, 5000) as monthly_rent,
                               COALESCE(c.contract_months, t.contract_months, 1) as contract_months,
                               COALESCE(c.downpayment_amount, t.downpayment_amount, 0) as downpayment_amount,
-                              (SELECT COALESCE(SUM(amount), 0) FROM finances WHERE tenant_id = $tenant_id AND payment_type != 'Downpayment') as total_rent_paid
+                              (SELECT COALESCE(SUM(f.amount), 0) FROM finances f WHERE f.tenant_id = $tenant_id AND f.payment_type != 'Downpayment' AND f.contract_id <=> c.id) as total_rent_paid
                               FROM tenants t
                               LEFT JOIN units u ON t.unit_id = u.id
                               LEFT JOIN contracts c ON t.id = c.tenant_id AND c.contract_status = 'Active'
@@ -124,9 +173,41 @@ switch ($method) {
             mysqli_stmt_bind_param($renewStmt, "iissid", $tenant_id, $unit_id, $new_start, $new_end, $extension_months, $monthly_rent);
                            
             if (mysqli_stmt_execute($renewStmt)) {
+                $newContractId = mysqli_insert_id($con);
+                generate_contract_bills($con, $tenant_id, $newContractId, $new_start, $extension_months, $monthly_rent);
                 echo json_encode(["success" => true, "message" => "Successfully added another contract extension!"]);
             } else {
                 echo json_encode(["success" => false, "message" => mysqli_error($con)]);
+            }
+            exit();
+        }
+
+        if ($action == 'create_account') {
+            $tenant_id = intval($_POST['tenant_id'] ?? 0);
+            $tq = mysqli_prepare($con, "SELECT fullname, email FROM tenants WHERE id = ?");
+            mysqli_stmt_bind_param($tq, "i", $tenant_id);
+            mysqli_stmt_execute($tq);
+            $t = mysqli_fetch_assoc(mysqli_stmt_get_result($tq));
+            mysqli_stmt_close($tq);
+
+            if (!$t) {
+                echo json_encode(["success" => false, "message" => "Tenant not found."]);
+                exit();
+            }
+            if (!filter_var($t['email'], FILTER_VALIDATE_EMAIL)) {
+                echo json_encode(["success" => false, "message" => "This tenant has no valid email address, so a login cannot be created."]);
+                exit();
+            }
+
+            $res = provision_tenant_account($con, $tenant_id, $t['email'], $t['fullname']);
+            if ($res['ok']) {
+                echo json_encode([
+                    "success" => true,
+                    "message" => $res['created'] ? "Tenant login created." : "Tenant password reset.",
+                    "account" => ["email" => $t['email'], "temp_password" => $res['password'], "created" => $res['created']]
+                ]);
+            } else {
+                echo json_encode(["success" => false, "message" => $res['message']]);
             }
             exit();
         }
@@ -150,6 +231,11 @@ switch ($method) {
 
         if (empty($fullname) || empty($contact_no) || $unit_id <= 0 || empty($birthdate) || empty($email)) {
             echo json_encode(["success" => false, "message" => "Please fill in all required information including birthdate and email!"]);
+            exit();
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(["success" => false, "message" => "Please enter a valid email address: it becomes the tenant's login."]);
             exit();
         }
 
@@ -222,6 +308,8 @@ switch ($method) {
         $query = "INSERT INTO tenants (fullname, birthdate, gender, contact_no, email, province_address, valid_id_type, valid_id_number, emergency_contact_name, emergency_contact_no, unit_id, start_date, contract_months, downpayment_status, downpayment_amount, status) 
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')";
                   
+        mysqli_begin_transaction($con); // tenant + unit + contract + downpayment succeed or fail together
+
         $stmt = mysqli_prepare($con, $query);
         mysqli_stmt_bind_param($stmt, "ssssssssssisisd", $fullname, $birthdate, $gender, $contact_no, $email, $province_address, $valid_id_type, $valid_id_number, $emergency_contact_name, $emergency_contact_no, $unit_id, $start_date, $contract_months, $downpayment_status, $downpayment_amount);
 
@@ -236,7 +324,30 @@ switch ($method) {
 
             $contractStmt = mysqli_prepare($con, "INSERT INTO contracts (tenant_id, unit_id, start_date, end_date, contract_months, monthly_rent, downpayment_amount, downpayment_status, contract_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active')");
             mysqli_stmt_bind_param($contractStmt, "iissidds", $tenant_id, $unit_id, $start_date, $end_date, $contract_months, $monthly_rent, $downpayment_amount, $downpayment_status);
-            mysqli_stmt_execute($contractStmt);
+            if (!mysqli_stmt_execute($contractStmt)) {
+                $err = mysqli_error($con);
+                mysqli_rollback($con);
+                echo json_encode(["success" => false, "message" => "Contract error: " . $err]);
+                exit();
+            }
+            $contract_id = mysqli_insert_id($con);
+
+            // Monthly installment bills (first one due after one month)
+            generate_contract_bills($con, $tenant_id, $contract_id, $start_date, $contract_months, $monthly_rent);
+
+            // Record the downpayment in finances (revenue, 30% budget, cash on hand).
+            // payment_type 'Downpayment' keeps it out of the rent-paid sum, so balances are not double counted.
+            if ($downpayment_amount > 0) {
+                $paidAt = (new DateTime('now', new DateTimeZone('Asia/Manila')))->format('Y-m-d H:i:s');
+                $fStmt = mysqli_prepare($con, "INSERT INTO finances (tenant_id, contract_id, tenant_name, unit_name, payment_type, amount, payment_date, status) VALUES (?, ?, ?, ?, 'Downpayment', ?, ?, 'Paid')");
+                mysqli_stmt_bind_param($fStmt, "iissds", $tenant_id, $contract_id, $fullname, $unit_name, $downpayment_amount, $paidAt);
+                if (!mysqli_stmt_execute($fStmt)) {
+                    $err = mysqli_error($con);
+                    mysqli_rollback($con);
+                    echo json_encode(["success" => false, "message" => "Finance error: " . $err]);
+                    exit();
+                }
+            }
 
             if (is_array($members)) {
                 foreach ($members as $m) {
@@ -252,9 +363,24 @@ switch ($method) {
                 }
             }
 
-            echo json_encode(["success" => true, "message" => "Family tenant and lease contract successfully registered!"]);
+            // Portal login (email + temporary password). Same transaction: all or nothing.
+            $acc = provision_tenant_account($con, $tenant_id, $email, $fullname);
+            if (!$acc['ok']) {
+                mysqli_rollback($con);
+                echo json_encode(["success" => false, "message" => "Login account error: " . $acc['message']]);
+                exit();
+            }
+
+            mysqli_commit($con);
+            echo json_encode([
+                "success" => true,
+                "message" => "Family tenant and lease contract successfully registered!",
+                "account" => ["email" => $email, "temp_password" => $acc['password'], "created" => true]
+            ]);
         } else {
-            echo json_encode(["success" => false, "message" => mysqli_error($con)]);
+            $err = mysqli_error($con);
+            mysqli_rollback($con);
+            echo json_encode(["success" => false, "message" => $err]);
         }
         break;
 
@@ -272,6 +398,20 @@ switch ($method) {
                 mysqli_stmt_bind_param($freeUnitStmt, "i", $uId);
                 mysqli_stmt_execute($freeUnitStmt);
             }
+
+            try { // conversation goes with the tenant (damage reports stay: they are linked to repair expenses)
+                $chatDel = mysqli_prepare($con, "DELETE FROM chat_messages WHERE tenant_id = ?");
+                mysqli_stmt_bind_param($chatDel, "i", $id);
+                mysqli_stmt_execute($chatDel);
+            } catch (Throwable $e) { /* migration 03 not run yet */ }
+
+            $billDel = mysqli_prepare($con, "DELETE FROM tenant_bills WHERE tenant_id = ?");
+            mysqli_stmt_bind_param($billDel, "i", $id);
+            mysqli_stmt_execute($billDel);
+
+            $accDel = mysqli_prepare($con, "DELETE FROM users WHERE tenant_id = ? AND role = 'tenant'");
+            mysqli_stmt_bind_param($accDel, "i", $id);
+            mysqli_stmt_execute($accDel);
 
             $delStmt = mysqli_prepare($con, "DELETE FROM tenants WHERE id = ?");
             mysqli_stmt_bind_param($delStmt, "i", $id);

@@ -10,8 +10,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     exit;
 }
 
-// Registration is only allowed while NO admin account exists yet.
-$countRes = mysqli_query($con, "SELECT COUNT(*) AS c FROM users");
+// Registration is only allowed while NO landlord account exists yet (tenant accounts do not count).
+$countRes = mysqli_query($con, "SELECT COUNT(*) AS c FROM users WHERE role = 'landlord'");
 $countRow = $countRes ? mysqli_fetch_assoc($countRes) : ['c' => 0];
 if (intval($countRow['c']) > 0) {
     http_response_code(403);
@@ -43,7 +43,7 @@ if (isset($data['gmail']) && isset($data['password']) && isset($data['names'])) 
 
     $hashed_password = password_hash($pass, PASSWORD_DEFAULT);
 
-    $stmt = $con->prepare("INSERT INTO users (gmail, password, names) VALUES (?, ?, ?)");
+    $stmt = $con->prepare("INSERT INTO users (gmail, password, names, role) VALUES (?, ?, ?, 'landlord')");
     $stmt->bind_param("sss", $gmail, $hashed_password, $names);
 
     if ($stmt->execute()) {
